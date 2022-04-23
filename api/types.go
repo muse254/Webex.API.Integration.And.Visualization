@@ -17,3 +17,16 @@ type HTTP4XXError struct {
 	} `json:"errors"`
 	TrackingID string `json:"trackingId"`
 }
+
+type OAuthRequest struct {
+	ClientID     string
+	ClientSecret string
+	Scope        string
+}
+
+type GenericPage struct {
+	Heading          string
+	Message          string
+	ShowHomeRedirect bool
+	ShowAPIRedirect  bool
+}

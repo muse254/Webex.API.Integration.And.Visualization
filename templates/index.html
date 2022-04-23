@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+</head>
+
+<body>
+    <h1>Start OAuth Flow</h1>
+    <form method="POST" action="/init">
+        <label for="client_id">Client ID</label><br />
+        <input type="text" name="client_id" id="client_id"></br>
+        <label for="client_secret">Client Secret</label></br>
+        <input type="text" name="client_secret" id="client_secret"></br>
+        <label for="scope"></label><br/>
+        <select name="scope" id="scopes">
+            <option value="analytics:readall">analytics:read_all</option>
+        </select>
+        <input type="submit">
+    </form>
+</body>
+
+</html>

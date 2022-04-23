@@ -11,7 +11,7 @@ const (
 	TOKEN_URL    = "https://webexapis.com/v1/access_token"
 	BASE_API_URL = "https://analytics.webexapis.com/v1"
 	// This scope provides access to read meeting quality metrics for your organization.
-	SCOPE = "analytics:read_all"
+	//SCOPE = "analytics:read_all"
 )
 
 type WebexAPIClient struct {
@@ -23,7 +23,7 @@ type WebexAPIClient struct {
 
 // StartWebexAPIFlow inititiates the OAuth flow requesting the user for permissions in order to
 // access the Webex API.
-func StartWebexAPIFlow(clientID, clientSecret, redirectURI string) error {
+func StartWebexAPIFlow(clientID, clientSecret, scope, redirectURI string) error {
 	// check the user credentails for authorization to interact with the API
 	req, err := http.NewRequest(http.MethodGet, AUTH_URL, nil)
 	if err != nil {
@@ -34,7 +34,7 @@ func StartWebexAPIFlow(clientID, clientSecret, redirectURI string) error {
 	q.Add("response_type", "code")
 	q.Add("client_id", clientID)
 	q.Add("redirect_uri", redirectURI)
-	q.Add("scope", SCOPE)
+	q.Add("scope", scope)
 	req.URL.RawQuery = q.Encode()
 
 	resp, err := http.DefaultClient.Do(req)
@@ -44,7 +44,7 @@ func StartWebexAPIFlow(clientID, clientSecret, redirectURI string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Unexpected status code: %d", resp.StatusCode)
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
 	return nil
@@ -111,7 +111,6 @@ func (c *WebexAPIClient) GetMeetings() error {
 	req.Header.Add("Authorization", "Bearer "+c.auth.AccessToken)
 
 	return nil
-
 }
 
 // When the access_token expires or is invalid, the refresh token is used to generate a new access token.

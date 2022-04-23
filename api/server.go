@@ -152,7 +152,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func errorPage(w io.Writer, errorMsg string) error {
-	tmpl, _ := template.ParseFiles("./templates/generic_template.html")
+	tmpl, _ := template.ParseFiles("./templates/generic_page.html")
 	return tmpl.Execute(w, GenericPage{
 		Heading:          "Error",
 		Message:          errorMsg,
@@ -163,7 +163,7 @@ func errorPage(w io.Writer, errorMsg string) error {
 // messagePage is the page that displays the messages also allowing for redirect to the
 // apiCalls page
 func messagePage(w io.Writer, message string, apiRedirect bool) error {
-	tmpl, _ := template.ParseFiles("./templates/generic_template.html")
+	tmpl, _ := template.ParseFiles("./templates/generic_page.html")
 	return tmpl.Execute(w, GenericPage{
 		Heading:          "Message",
 		Message:          message,

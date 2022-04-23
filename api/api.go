@@ -10,8 +10,6 @@ const (
 	AUTH_URL     = "https://webexapis.com/v1/authorize"
 	TOKEN_URL    = "https://webexapis.com/v1/access_token"
 	BASE_API_URL = "https://analytics.webexapis.com/v1"
-	// This scope provides access to read meeting quality metrics for your organization.
-	//SCOPE = "analytics:read_all"
 )
 
 type WebexAPIClient struct {

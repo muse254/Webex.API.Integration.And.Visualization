@@ -9,14 +9,14 @@ import (
 const (
 	AUTH_URL     = "https://webexapis.com/v1/authorize"
 	TOKEN_URL    = "https://webexapis.com/v1/access_token"
-	BASE_API_URL = "https://analytics.webexapis.com/v1"
+	BASE_API_URL = "https://webexapis.com/v1"
 )
 
 type WebexAPIClient struct {
 	clientID     string
 	clientSecret string
 	redirectURI  string
-	auth         *AuthResponse
+	auth         AuthResponse
 }
 
 // StartWebexAPIFlow inititiates the OAuth flow requesting the user for permissions in order to
@@ -91,14 +91,19 @@ func NewWebexAPIClient(OAuthCode, clientID, clientSecret, redirectURI string) (*
 		clientID:     clientID,
 		clientSecret: clientSecret,
 		redirectURI:  redirectURI,
-		auth:         &authResp,
+		auth:         authResp,
 	}, nil
 }
 
-func (c *WebexAPIClient) GetMeetings() error {
+// ListMeeting lists all meenting that are accessible to the client account.
+func (c *WebexAPIClient) ListMeetings(tries int) ([]MeetingSeries, error) {
+	if tries > 3 {
+		return nil, fmt.Errorf("failed to get meetings")
+	}
+
 	req, err := http.NewRequest(http.MethodGet, BASE_API_URL+"/meetings", nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	q := req.URL.Query()
@@ -108,7 +113,35 @@ func (c *WebexAPIClient) GetMeetings() error {
 	req.URL.RawQuery = q.Encode()
 	req.Header.Add("Authorization", "Bearer "+c.auth.AccessToken)
 
-	return nil
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		{
+			var meetings []MeetingSeries
+			if err := json.NewDecoder(resp.Body).Decode(&meetings); err != nil {
+				return nil, err
+			}
+
+			return meetings, nil
+		}
+
+	case http.StatusUnauthorized:
+		if err = c.refreshToken(); err != nil {
+			return nil, err
+		}
+		return c.ListMeetings(tries + 1)
+
+	case http.StatusNoContent:
+		return nil, nil
+
+	default:
+		return nil, fmt.Errorf("failed to get meetings")
+	}
 }
 
 // When the access_token expires or is invalid, the refresh token is used to generate a new access token.
@@ -147,6 +180,6 @@ func (c *WebexAPIClient) refreshToken() error {
 	}
 
 	// update the client
-	c.auth = &authResp
+	c.auth = authResp
 	return nil
 }

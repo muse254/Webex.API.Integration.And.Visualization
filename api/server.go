@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 )
@@ -49,7 +50,7 @@ func RedirectServer() error {
 	})
 	http.HandleFunc("/init", init_flow(host))
 	http.HandleFunc("/auth", auth(host))
-	http.HandleFunc("/api", apiHandler)
+	http.HandleFunc("/api", apiHandler(host))
 
 	return http.ListenAndServe(":3000", nil)
 }
@@ -84,15 +85,20 @@ func init_flow(host string) http.HandlerFunc {
 		}
 		http.SetCookie(w, cookie)
 
-		// request to Webex API to get the OAuth code
-		if err := StartWebexAPIFlow(oauthReq.ClientID, oauthReq.ClientSecret, oauthReq.Scope, fmt.Sprintf("%s/auth", host)); err != nil {
+		// redirect to Webex, calling the auth endpoint
+		u, err := url.Parse(AUTH_URL)
+		if err != nil {
 			// redirect to error page
 			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
 			return
 		}
-
-		// redirect to WebexAPI calls page
-
+		q := u.Query()
+		q.Add("response_type", "code")
+		q.Add("client_id", oauthReq.ClientID)
+		q.Add("redirect_uri", fmt.Sprintf("%s/auth", host))
+		q.Add("scope", oauthReq.Scope)
+		u.RawQuery = q.Encode()
+		http.Redirect(w, r, u.String(), http.StatusSeeOther)
 	}
 }
 
@@ -146,9 +152,24 @@ func auth(host string) http.HandlerFunc {
 	}
 }
 
-// TODO: implement stop.
-func apiHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO
+func apiHandler(host string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) { // check where the cookie exists for auth response, if not redirect to auth page
+		cookie, err := r.Cookie("WebexAPIClient")
+		if err != nil {
+			http.Redirect(w, r, fmt.Sprintf("%s/auth", host), http.StatusSeeOther)
+			return
+		}
+
+		// Decode the WebexAPIClient from the cookie
+		var client WebexAPIClient
+		if err := decodeFromBase64(&client, cookie.Value); err != nil {
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
+			return
+		}
+
+		// use the client to make API calls, by providing html body for associated calls
+
+	}
 }
 
 func errorPage(w io.Writer, errorMsg string) error {

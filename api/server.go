@@ -97,6 +97,7 @@ func init_flow(host string) http.HandlerFunc {
 		q.Add("client_id", oauthReq.ClientID)
 		q.Add("redirect_uri", fmt.Sprintf("%s/auth", host))
 		q.Add("scope", oauthReq.Scope)
+		q.Add("state", "some state")
 		u.RawQuery = q.Encode()
 		http.Redirect(w, r, u.String(), http.StatusSeeOther)
 	}

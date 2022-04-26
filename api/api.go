@@ -48,7 +48,7 @@ func NewWebexAPIClient(OAuthCode, clientID, clientSecret, redirectURI string) (*
 	defer resp.Body.Close()
 
 	// when the OAuth provide is invalid, the response will be a 401 error
-	if resp.StatusCode != http.StatusUnauthorized {
+	if resp.StatusCode == http.StatusUnauthorized {
 		var errResponse HTTP4XXError
 		if json.NewDecoder(resp.Body).Decode(&errResponse); err != nil {
 			return nil, err

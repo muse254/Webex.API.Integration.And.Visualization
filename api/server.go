@@ -11,8 +11,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-
-	"github.com/gorilla/mux"
 )
 
 func RedirectServer() error {
@@ -22,11 +20,10 @@ func RedirectServer() error {
 		return fmt.Errorf("HOST environment variable is not set")
 	}
 
-	r := mux.NewRouter()
-	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./templates/index.html")
 	})
-	r.HandleFunc("/error", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/error", func(w http.ResponseWriter, r *http.Request) {
 		// The request will be like so: http://your-server.com/error?msg=<ErrorMsg>
 		errorMsg := r.URL.Query().Get("msg")
 		if errorMsg == "" {
@@ -38,7 +35,7 @@ func RedirectServer() error {
 			return
 		}
 	})
-	r.HandleFunc("/message", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/message", func(w http.ResponseWriter, r *http.Request) {
 		// The request will be like so: http://your-server.com/message?msg=<Msg>
 		msg := r.URL.Query().Get("msg")
 		apiRedirect := true
@@ -51,11 +48,9 @@ func RedirectServer() error {
 			return
 		}
 	})
-	r.HandleFunc("/init", init_flow(host))
-	r.HandleFunc("/auth", auth(host))
-
-	apiRouter := r.PathPrefix("/api").Subrouter()
-	apiRouter.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/init", init_flow(host))
+	http.HandleFunc("/auth", auth(host))
+	http.HandleFunc("/api", func(w http.ResponseWriter, r *http.Request) {
 		// check if cookie exists for API calls
 		_, err := r.Cookie("WebexAPIClient")
 		if err != nil {
@@ -66,9 +61,9 @@ func RedirectServer() error {
 		// display all APIs calls page
 		http.ServeFile(w, r, "./templates/api_calls.html")
 	})
-	apiRouter.HandleFunc("/get_meetings", getMeetings(host))
-	
-	return http.ListenAndServe(":3000", r)
+	http.HandleFunc("/api/get_meetings", getMeetings(host))
+
+	return http.ListenAndServe(":3000", nil)
 }
 
 // init_flow initializes the Oauth Flow for the application
@@ -207,7 +202,7 @@ func getMeetings(host string) http.HandlerFunc {
 			return
 		}
 
-		t, _ := template.ParseFiles("templates/get_meetings.html")
+		t, _ := template.ParseFiles("./templates/get_meetings.html")
 		t.Execute(w, string(data))
 	}
 }

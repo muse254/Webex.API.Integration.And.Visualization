@@ -107,6 +107,9 @@ func init_flow(host string) http.HandlerFunc {
 // The request will be like so: http://your-server.com/auth?code=<OAuthCode>
 func auth(host string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// log the complete path
+		fmt.Println(r.URL.String())
+
 		code := r.URL.Query().Get("code")
 		if code == "" {
 			// redirect to error page

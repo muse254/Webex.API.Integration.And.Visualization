@@ -19,35 +19,6 @@ type WebexAPIClient struct {
 	auth         AuthResponse
 }
 
-// StartWebexAPIFlow inititiates the OAuth flow requesting the user for permissions in order to
-// access the Webex API.
-func StartWebexAPIFlow(clientID, clientSecret, scope, redirectURI string) error {
-	// check the user credentails for authorization to interact with the API
-	req, err := http.NewRequest(http.MethodGet, AUTH_URL, nil)
-	if err != nil {
-		return err
-	}
-
-	q := req.URL.Query()
-	q.Add("response_type", "code")
-	q.Add("client_id", clientID)
-	q.Add("redirect_uri", redirectURI)
-	q.Add("scope", scope)
-	req.URL.RawQuery = q.Encode()
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
-	return nil
-}
-
 // When the user successfully authorizes the application, the OAuth code is retrieved from the redirect handler and
 // used in creating the WebexAPIClient.
 func NewWebexAPIClient(OAuthCode, clientID, clientSecret, redirectURI string) (*WebexAPIClient, error) {

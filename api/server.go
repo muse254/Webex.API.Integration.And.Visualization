@@ -11,6 +11,8 @@ import (
 	"net/url"
 	"os"
 	"strings"
+
+	"github.com/gorilla/mux"
 )
 
 func RedirectServer() error {
@@ -20,10 +22,11 @@ func RedirectServer() error {
 		return fmt.Errorf("HOST environment variable is not set")
 	}
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	r := mux.NewRouter()
+	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./templates/index.html")
 	})
-	http.HandleFunc("/error", func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/error", func(w http.ResponseWriter, r *http.Request) {
 		// The request will be like so: http://your-server.com/error?msg=<ErrorMsg>
 		errorMsg := r.URL.Query().Get("msg")
 		if errorMsg == "" {
@@ -35,7 +38,7 @@ func RedirectServer() error {
 			return
 		}
 	})
-	http.HandleFunc("/message", func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/message", func(w http.ResponseWriter, r *http.Request) {
 		// The request will be like so: http://your-server.com/message?msg=<Msg>
 		msg := r.URL.Query().Get("msg")
 		apiRedirect := true
@@ -48,11 +51,24 @@ func RedirectServer() error {
 			return
 		}
 	})
-	http.HandleFunc("/init", init_flow(host))
-	http.HandleFunc("/auth", auth(host))
-	http.HandleFunc("/api", apiHandler(host))
+	r.HandleFunc("/init", init_flow(host))
+	r.HandleFunc("/auth", auth(host))
 
-	return http.ListenAndServe(":3000", nil)
+	apiRouter := r.PathPrefix("/api").Subrouter()
+	apiRouter.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// check if cookie exists for API calls
+		_, err := r.Cookie("WebexAPIClient")
+		if err != nil {
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
+			return
+		}
+
+		// display all APIs calls page
+		http.ServeFile(w, r, "./templates/api_calls.html")
+	})
+	apiRouter.HandleFunc("/get_meetings", getMeetings(host))
+	
+	return http.ListenAndServe(":3000", r)
 }
 
 // init_flow initializes the Oauth Flow for the application
@@ -159,23 +175,40 @@ func auth(host string) http.HandlerFunc {
 	}
 }
 
-func apiHandler(host string) http.HandlerFunc {
+func getMeetings(host string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) { // check where the cookie exists for auth response, if not redirect to auth page
 		cookie, err := r.Cookie("WebexAPIClient")
 		if err != nil {
-			http.Redirect(w, r, fmt.Sprintf("%s/auth", host), http.StatusSeeOther)
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
 			return
 		}
 
-		// Decode the WebexAPIClient from the cookie
+		// get_meetings API call
 		var client WebexAPIClient
 		if err := decodeFromBase64(&client, cookie.Value); err != nil {
 			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
 			return
 		}
 
-		// use the client to make API calls, by providing html body for associated calls
+		meetings, err := client.ListMeetings(0)
+		if err != nil {
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
+			return
+		}
 
+		// render the meetings page, pretty print the meetings as json
+		data, err := json.MarshalIndent(struct {
+			Meetings []MeetingSeries
+		}{
+			Meetings: meetings,
+		}, "", "\t")
+		if err != nil {
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
+			return
+		}
+
+		t, _ := template.ParseFiles("templates/get_meetings.html")
+		t.Execute(w, string(data))
 	}
 }
 

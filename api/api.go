@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -15,6 +16,7 @@ const (
 	BASE_API_URL = "https://webexapis.com/v1"
 )
 
+// WebexAPIClient is a convenience wrapper that will be used to make API calls to the Webex API.
 type WebexAPIClient struct {
 	clientID     string
 	clientSecret string
@@ -122,16 +124,20 @@ func (c *WebexAPIClient) ListMeetings(tries int) ([]MeetingSeries, error) {
 
 // When the access_token expires or is invalid, the refresh token is used to generate a new access token.
 func (c *WebexAPIClient) refreshToken() error {
-	req, err := http.NewRequest(http.MethodGet, TOKEN_URL, nil)
+	data, err := json.Marshal(RefreshTokenRequest{
+		GrantType:    "refresh_token",
+		ClientID:     c.clientID,
+		ClientSecret: c.clientSecret,
+		RefreshToken: c.auth.RefreshToken,
+	})
 	if err != nil {
 		return err
 	}
 
-	q := req.URL.Query()
-	q.Add("grant_type", "refresh_token")
-	q.Add("client_id", c.clientID)
-	q.Add("client_secret", c.clientSecret)
-	q.Add("refresh_token", c.auth.RefreshToken)
+	req, err := http.NewRequest(http.MethodPost, TOKEN_URL, bytes.NewBuffer(data))
+	if err != nil {
+		return err
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -140,7 +146,7 @@ func (c *WebexAPIClient) refreshToken() error {
 	defer resp.Body.Close()
 
 	// when the refresh token is expired, the response will be a 400 error
-	if resp.StatusCode != http.StatusBadRequest {
+	if resp.StatusCode == http.StatusBadRequest {
 		var errResponse HTTP4XXError
 		if json.NewDecoder(resp.Body).Decode(&errResponse); err != nil {
 			return err

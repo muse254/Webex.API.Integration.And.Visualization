@@ -24,6 +24,13 @@ type OAuthRequest struct {
 	Scope        string
 }
 
+type RefreshTokenRequest struct {
+	GrantType    string `json:"grant_type"`
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+	RefreshToken string `json:"refresh_token"`
+}
+
 type GenericPage struct {
 	Heading          string
 	Message          string

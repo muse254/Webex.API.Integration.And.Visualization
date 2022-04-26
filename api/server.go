@@ -68,7 +68,7 @@ func init_flow(host string) http.HandlerFunc {
 		oauthReq := OAuthRequest{
 			ClientID:     strings.TrimSpace(r.FormValue("client_id")),
 			ClientSecret: strings.TrimSpace(r.FormValue("client_secret")),
-			Scope:        "analytics:readall",
+			Scope:        strings.TrimSpace(r.FormValue("scope")),
 		}
 
 		// create cookie for later reference

@@ -36,7 +36,7 @@ func RedirectServer() error {
 		}
 	})
 	http.HandleFunc("/message", func(w http.ResponseWriter, r *http.Request) {
-		// The request will be like so: http://your-server.com/message?msg=<ErrorMsg>
+		// The request will be like so: http://your-server.com/message?msg=<Msg>
 		msg := r.URL.Query().Get("msg")
 		apiRedirect := true
 		if msg == "" {
@@ -121,7 +121,7 @@ func auth(host string) http.HandlerFunc {
 		cookie, err := r.Cookie("OAuthRequest")
 		if err != nil {
 			// redirect to error page
-			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, "No OAuth code provided"), http.StatusSeeOther)
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
 			return
 		}
 
@@ -153,6 +153,9 @@ func auth(host string) http.HandlerFunc {
 			Value: clientStr,
 		}
 		http.SetCookie(w, cookie)
+
+		// redirect to message page with option for API redirect
+		http.Redirect(w, r, fmt.Sprintf("%s/message?msg=%s", host, "Successfully authenticated"), http.StatusSeeOther)
 	}
 }
 

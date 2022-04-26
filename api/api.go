@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
 )
 
 const (
@@ -22,19 +25,21 @@ type WebexAPIClient struct {
 // When the user successfully authorizes the application, the OAuth code is retrieved from the redirect handler and
 // used in creating the WebexAPIClient.
 func NewWebexAPIClient(OAuthCode, clientID, clientSecret, redirectURI string) (*WebexAPIClient, error) {
+	// using data form-urlencoded
+	data := url.Values{}
+	data.Add("grant_type", "authorization_code")
+	data.Add("code", OAuthCode)
+	data.Add("client_id", clientID)
+	data.Add("client_secret", clientSecret)
+	data.Add("redirect_uri", redirectURI)
+
 	// retrive the access token using the OAuth code to verify the user's identity
-	req, err := http.NewRequest(http.MethodGet, TOKEN_URL, nil)
+	req, err := http.NewRequest(http.MethodPost, TOKEN_URL, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, err
 	}
-
-	q := req.URL.Query()
-	q.Add("grant_type", "authorization_code")
-	q.Add("client_id", clientID)
-	q.Add("client_secret", clientSecret)
-	q.Add("code", OAuthCode)
-	q.Add("redirect_uri", redirectURI)
-	req.URL.RawQuery = q.Encode()
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

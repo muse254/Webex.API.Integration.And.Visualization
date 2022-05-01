@@ -38,6 +38,10 @@ type GenericPage struct {
 	ShowAPIRedirect  bool
 }
 
+type MeetingsList struct {
+	Items []MeetingSeries `json:"items"`
+}
+
 type MeetingSeries struct {
 	ID                                  string                 `json:"id"`
 	MeetingNumber                       string                 `json:"meetingNumber"`

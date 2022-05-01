@@ -74,7 +74,7 @@ func NewWebexAPIClient(OAuthCode, clientID, clientSecret, redirectURI string) (*
 }
 
 // ListMeeting lists all meetings that are accessible to the client account.
-func (c *WebexAPIClient) ListMeetings(tries int) ([]MeetingSeries, error) {
+func (c *WebexAPIClient) ListMeetings(tries int) (*MeetingsList, error) {
 	if tries > 3 {
 		return nil, fmt.Errorf("failed to get meetings from API, StatusCode: StatusUnauthorized")
 	}
@@ -94,12 +94,12 @@ func (c *WebexAPIClient) ListMeetings(tries int) ([]MeetingSeries, error) {
 	switch resp.StatusCode {
 	case http.StatusOK:
 		{
-			var meetings []MeetingSeries
+			var meetings MeetingsList
 			if err := json.NewDecoder(resp.Body).Decode(&meetings); err != nil {
 				return nil, err
 			}
 
-			return meetings, nil
+			return &meetings, nil
 		}
 
 	case http.StatusUnauthorized:

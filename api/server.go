@@ -192,11 +192,7 @@ func getMeetings(host string) http.HandlerFunc {
 		}
 
 		// render the meetings page, pretty print the meetings as json
-		data, err := json.MarshalIndent(struct {
-			Items []MeetingSeries `json:"items"`
-		}{
-			Items: meetings,
-		}, "", "\t")
+		data, err := json.MarshalIndent(meetings, "", "\t")
 		if err != nil {
 			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
 			return

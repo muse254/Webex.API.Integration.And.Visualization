@@ -11,9 +11,8 @@ import (
 )
 
 const (
-	AUTH_URL     = "https://webexapis.com/v1/authorize"
-	TOKEN_URL    = "https://webexapis.com/v1/access_token"
-	BASE_API_URL = "https://webexapis.com/v1"
+	AUTH_URL  = "https://webexapis.com/v1/authorize"
+	TOKEN_URL = "https://webexapis.com/v1/access_token"
 )
 
 // WebexAPIClient is a convenience wrapper that will be used to make API calls to the Webex API.
@@ -79,10 +78,14 @@ func (c *WebexAPIClient) ListMeetings(tries int) (*MeetingsList, error) {
 		return nil, fmt.Errorf("failed to get meetings from API, StatusCode: StatusUnauthorized")
 	}
 
-	req, err := http.NewRequest(http.MethodGet, BASE_API_URL+"/meetings", nil)
+	req, err := http.NewRequest(http.MethodGet, "https://webexapis.com/v1/meetings", nil)
 	if err != nil {
 		return nil, err
 	}
+
+	req.URL.RawQuery = (url.Values{
+		"meetingType": []string{"meeting"},
+	}).Encode()
 	req.Header.Add("Authorization", "Bearer "+c.Auth.AccessToken)
 
 	resp, err := http.DefaultClient.Do(req)
@@ -113,6 +116,100 @@ func (c *WebexAPIClient) ListMeetings(tries int) (*MeetingsList, error) {
 
 	default:
 		return nil, fmt.Errorf("failed to get meetings from API, StatusCode: %s", resp.Status)
+	}
+}
+
+// GetMeeting gets a meeting by ID.
+func (c *WebexAPIClient) GetMeeting(meetingID string, tries int) (*MeetingSeries, error) {
+	if tries > 3 {
+		return nil, fmt.Errorf("failed to get meeting from API, StatusCode: StatusUnauthorized")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("https://webexapis.com/v1/meetings/%s", meetingID), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.URL.RawQuery = (url.Values{
+		"meetingType": []string{"meeting"},
+	}).Encode()
+	req.Header.Add("Authorization", "Bearer "+c.Auth.AccessToken)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		{
+			var meeting MeetingSeries
+			if err := json.NewDecoder(resp.Body).Decode(&meeting); err != nil {
+				return nil, err
+			}
+
+			return &meeting, nil
+		}
+
+	case http.StatusUnauthorized:
+		if err = c.refreshToken(); err != nil {
+			return nil, err
+		}
+		return c.GetMeeting(meetingID, tries+1)
+
+	case http.StatusNoContent:
+		return nil, nil
+
+	default:
+		return nil, fmt.Errorf("failed to get meeting from API, StatusCode: %s", resp.Status)
+	}
+}
+
+// GetMeetingQualities gets the qualities of a meeting.
+func (c *WebexAPIClient) GetMeetingQualities(meetingID string, tries int) (*MeetingQualities, error) {
+	if tries > 3 {
+		return nil, fmt.Errorf("failed to get meeting quality from API, StatusCode: StatusUnauthorized")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, "https://analytics.webexapis.com/v1/meeting/qualities", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.URL.RawQuery = (url.Values{
+		"meetingType": []string{"meeting"},
+	}).Encode()
+	req.Header.Add("Authorization", "Bearer "+c.Auth.AccessToken)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		{
+			var meetingQualities MeetingQualities
+			if err := json.NewDecoder(resp.Body).Decode(&meetingQualities); err != nil {
+				return nil, err
+			}
+
+			return &meetingQualities, nil
+		}
+
+	case http.StatusUnauthorized:
+		if err = c.refreshToken(); err != nil {
+			return nil, err
+		}
+		return c.GetMeetingQualities(meetingID, tries+1)
+
+	case http.StatusNoContent:
+		return nil, nil
+
+	default:
+		return nil, fmt.Errorf("failed to get meeting qualities from API, StatusCode: %s", resp.Status)
 	}
 }
 

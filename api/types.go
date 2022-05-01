@@ -86,3 +86,65 @@ type MeetingSeries struct {
 	Registration                        map[string]interface{} `json:"registration"`
 	IntegrationTags                     []string               `json:"integrationTags"`
 }
+
+type MeetingQualities struct {
+	Items []MediaSessionQuality `json:"items"`
+}
+
+type MediaSessionQuality struct {
+	MeetingId        string `json:"meetingId"`
+	DisplayName      string `json:"displayName"`
+	Email            string `json:"email"`
+	Joined           string `json:"joined"`
+	Client           string `json:"client"`
+	ClientVersion    string `json:"clientVersion"`
+	OsType           string `json:"osType"`
+	OsVersion        string `json:"osVersion"`
+	HardwareType     string `json:"hardwareType"`
+	SpeakerName      string `json:"speakerName"`
+	NetworkType      string `json:"networkType"`
+	LocalIP          string `json:"localIP"`
+	PublicIP         string `json:"publicIP"`
+	MaskedLocalIP    string `json:"maskedLocalIP"`
+	MaskedPublicIP   string `json:"maskedPublicIP"`
+	Camera           string `json:"camera"`
+	Microphone       string `json:"microphone"`
+	ServerRegion     string `json:"serverRegion"`
+	VideoMeshCluster string `json:"videoMeshCluster"`
+	ParticipantID    string `json:"participantId"`
+	// VideoIn is the collection of downstream (sent to the client) video quality data.
+	VideoIn []MediaQualityData `json:"videoIn"`
+	// VideoOut is the collection of upstream (sent from the client) video quality data.
+	VideoOut []MediaQualityData `json:"videoOut"`
+	// AudioIn is the collection of downstream (sent to the client) audio quality data.
+	AudioIn []MediaQualityData `json:"audioIn"`
+	// AudioOut is the collection of upstream (sent from the client) audio quality data.
+	AudioOut []MediaQualityData `json:"audioOut"`
+	// ShareIn is the collection of downstream (sent to the client) share quality data.
+	ShareIn []MediaQualityData `json:"shareIn"`
+	// ShareOut is the collection of upstream (sent from the client) share quality data.
+	ShareOut []MediaQualityData `json:"shareOut"`
+	// Resources sre devide resources such as CPU and memory.
+	Resources []Resources `json:"resources"`
+}
+
+type MediaQualityData struct {
+	SamplingInterval int       `json:"samplingInterval"`
+	StartTime        string    `json:"startTime"`
+	EndTime          string    `json:"endTime"`
+	PacketLoss       []float32 `json:"packetLoss"`
+	Latency          []int     `json:"latency"`
+	ResolutionHeight []int     `json:"resolutionHeight,omitempty"`
+	FrameRate        []int     `json:"frameRate,omitempty"`
+	MediaBitRate     []int     `json:"mediaBitRate"`
+	Codec            string    `json:"codec"`
+	Jitter           []int     `json:"jitter"`
+	TransportType    string    `json:"transportType"`
+}
+
+type Resources struct {
+	ProcessAverageCPU []string `json:"processAverageCPU"`
+	ProcessMaxCPU     []string `json:"processMaxCPU"`
+	SystemAverageCPU  []string `json:"systemAverageCPU"`
+	SystemMaxCPU      []string `json:"systemMaxCPU"`
+}

@@ -79,7 +79,7 @@ func init_flow(host string) http.HandlerFunc {
 		oauthReq := OAuthRequest{
 			ClientID:     strings.TrimSpace(r.FormValue("client_id")),
 			ClientSecret: strings.TrimSpace(r.FormValue("client_secret")),
-			Scope:        "analytics:read_all meeting:transcripts_read meeting:schedules_read",
+			Scope:        "analytics:read_all meeting:schedules_read",
 		}
 
 		// create cookie for later reference
@@ -193,9 +193,9 @@ func getMeetings(host string) http.HandlerFunc {
 
 		// render the meetings page, pretty print the meetings as json
 		data, err := json.MarshalIndent(struct {
-			Meetings []MeetingSeries
+			Items []MeetingSeries `json:"items"`
 		}{
-			Meetings: meetings,
+			Items: meetings,
 		}, "", "\t")
 		if err != nil {
 			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)

@@ -18,10 +18,10 @@ const (
 
 // WebexAPIClient is a convenience wrapper that will be used to make API calls to the Webex API.
 type WebexAPIClient struct {
-	clientID     string
-	clientSecret string
-	redirectURI  string
-	auth         AuthResponse
+	ClientID     string       `json:"client_id"`
+	ClientSecret string       `json:"client_secret"`
+	RedirectURI  string       `json:"redirect_uri"`
+	Auth         AuthResponse `json:"auth"`
 }
 
 // When the user successfully authorizes the application, the OAuth code is retrieved from the redirect handler and
@@ -66,10 +66,10 @@ func NewWebexAPIClient(OAuthCode, clientID, clientSecret, redirectURI string) (*
 	}
 
 	return &WebexAPIClient{
-		clientID:     clientID,
-		clientSecret: clientSecret,
-		redirectURI:  redirectURI,
-		auth:         authResp,
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		RedirectURI:  redirectURI,
+		Auth:         authResp,
 	}, nil
 }
 
@@ -83,7 +83,7 @@ func (c *WebexAPIClient) ListMeetings(tries int) ([]MeetingSeries, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add("Authorization", "Bearer "+c.auth.AccessToken)
+	req.Header.Add("Authorization", "Bearer "+c.Auth.AccessToken)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -120,9 +120,9 @@ func (c *WebexAPIClient) ListMeetings(tries int) ([]MeetingSeries, error) {
 func (c *WebexAPIClient) refreshToken() error {
 	data, err := json.Marshal(RefreshTokenRequest{
 		GrantType:    "refresh_token",
-		ClientID:     c.clientID,
-		ClientSecret: c.clientSecret,
-		RefreshToken: c.auth.RefreshToken,
+		ClientID:     c.ClientID,
+		ClientSecret: c.ClientSecret,
+		RefreshToken: c.Auth.RefreshToken,
 	})
 	if err != nil {
 		return err
@@ -156,6 +156,6 @@ func (c *WebexAPIClient) refreshToken() error {
 	}
 
 	// update the client
-	c.auth = authResp
+	c.Auth = authResp
 	return nil
 }

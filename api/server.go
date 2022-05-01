@@ -174,7 +174,7 @@ func getMeetings(host string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) { // check where the cookie exists for auth response, if not redirect to auth page
 		cookie, err := r.Cookie("WebexAPIClient")
 		if err != nil {
-			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, "Complete the authentication flow."), http.StatusSeeOther)
 			return
 		}
 

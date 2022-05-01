@@ -73,22 +73,16 @@ func NewWebexAPIClient(OAuthCode, clientID, clientSecret, redirectURI string) (*
 	}, nil
 }
 
-// ListMeeting lists all meenting that are accessible to the client account.
+// ListMeeting lists all meetings that are accessible to the client account.
 func (c *WebexAPIClient) ListMeetings(tries int) ([]MeetingSeries, error) {
 	if tries > 3 {
-		return nil, fmt.Errorf("failed to get meetings")
+		return nil, fmt.Errorf("failed to get meetings from API, StatusCode: StatusUnauthorized")
 	}
 
 	req, err := http.NewRequest(http.MethodGet, BASE_API_URL+"/meetings", nil)
 	if err != nil {
 		return nil, err
 	}
-
-	q := req.URL.Query()
-	{
-
-	}
-	req.URL.RawQuery = q.Encode()
 	req.Header.Add("Authorization", "Bearer "+c.auth.AccessToken)
 
 	resp, err := http.DefaultClient.Do(req)
@@ -118,7 +112,7 @@ func (c *WebexAPIClient) ListMeetings(tries int) ([]MeetingSeries, error) {
 		return nil, nil
 
 	default:
-		return nil, fmt.Errorf("failed to get meetings")
+		return nil, fmt.Errorf("failed to get meetings from API, StatusCode: %s", resp.Status)
 	}
 }
 

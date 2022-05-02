@@ -5,13 +5,27 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Meetings</title>
 </head>
 
 <body>
-    The Json Output:<br />
-    <pre>{{.}}</pre>
-    <br />
+    <div style="text-align: center;">
+        <h1>Meetings</h1>
+        {{if not .Items}}
+        <p style="color: red;">There were no meetings</p>
+        {{else}}
+        {{range .Items}}
+        <div style="padding-bottom: 20px;">
+            <h3>Title: {{.Title}}</h3>
+            <p>ID: {{.ID}}</p>
+            <p>Agenda: {{.Agenda}}</p>
+            <p>Start: {{.Start}}</p>
+            <p>End: {{.End}}</p>
+            <a href="/api/get_analytics?id={{.ID}}">Get Analytics</a>
+        </div>
+        {{end}}
+        {{end}}
+    </div>
 </body>
 
 </html>

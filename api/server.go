@@ -13,7 +13,8 @@ import (
 	"strings"
 )
 
-func RedirectServer() error {
+// WebexApplicationServer is the server for the Webex Application.
+func WebexApplicationServer() error {
 	// load the server's host
 	host := os.Getenv("HOST")
 	if host == "" {
@@ -62,6 +63,7 @@ func RedirectServer() error {
 		http.ServeFile(w, r, "./templates/api_calls.html")
 	})
 	http.HandleFunc("/api/get_meetings", getMeetings(host))
+	http.HandleFunc("/api/get_analytics", getAnalytics(host))
 
 	return http.ListenAndServe(":3000", nil)
 }
@@ -170,15 +172,17 @@ func auth(host string) http.HandlerFunc {
 	}
 }
 
+// getMeetings is the handler for the /api/get_meetings endpoint.
 func getMeetings(host string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) { // check where the cookie exists for auth response, if not redirect to auth page
+	return func(w http.ResponseWriter, r *http.Request) {
+		// check where the cookie exists from client, if not redirect to error page
 		cookie, err := r.Cookie("WebexAPIClient")
 		if err != nil {
 			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, "Complete the authentication flow."), http.StatusSeeOther)
 			return
 		}
 
-		// get_meetings API call
+		// get WebexAPIClient from cookie
 		var client WebexAPIClient
 		if err := decodeFromBase64(&client, cookie.Value); err != nil {
 			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
@@ -191,18 +195,56 @@ func getMeetings(host string) http.HandlerFunc {
 			return
 		}
 
-		// render the meetings page, pretty print the meetings as json
-		data, err := json.MarshalIndent(meetings, "", "\t")
+		// render the page with data provided
+		t, _ := template.ParseFiles("./templates/get_meetings.html")
+		t.Execute(w, meetings)
+	}
+}
+
+func getAnalytics(host string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// retrieve the id from path
+		id := r.URL.Query().Get("id")
+		if id == "" {
+			// redirect to error page
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, "No meeting id provided in path"), http.StatusSeeOther)
+			return
+		}
+
+		// check where the cookie exists from client, if not redirect to error page
+		cookie, err := r.Cookie("WebexAPIClient")
+		if err != nil {
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, "Complete the authentication flow."), http.StatusSeeOther)
+			return
+		}
+
+		// get WebexAPIClient from cookie
+		var client WebexAPIClient
+		if err := decodeFromBase64(&client, cookie.Value); err != nil {
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
+			return
+		}
+
+		// fetch the analytics data
+		qualities, err := client.GetMeetingQualities(id, 0)
 		if err != nil {
 			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
 			return
 		}
 
-		t, _ := template.ParseFiles("./templates/get_meetings.html")
+		// render the meeting qualities page, pretty print the qualities as json
+		data, err := json.MarshalIndent(qualities, "", "\t")
+		if err != nil {
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
+			return
+		}
+
+		t, _ := template.ParseFiles("./templates/get_analytics.html")
 		t.Execute(w, string(data))
 	}
 }
 
+// errorPage is the error page that is displayed when an error occurs.
 func errorPage(w io.Writer, errorMsg string) error {
 	tmpl, _ := template.ParseFiles("./templates/generic_page.html")
 	return tmpl.Execute(w, GenericPage{
@@ -224,6 +266,7 @@ func messagePage(w io.Writer, message string, apiRedirect bool) error {
 	})
 }
 
+// encodeToBase64 encodes a non-pointer type to a base64 string
 func encodeToBase64(v interface{}) (string, error) {
 	var buf bytes.Buffer
 	encoder := base64.NewEncoder(base64.StdEncoding, &buf)
@@ -235,6 +278,7 @@ func encodeToBase64(v interface{}) (string, error) {
 	return buf.String(), nil
 }
 
+// decodeFromBase64 decodes a base64 string to a non-pointer type
 func decodeFromBase64(v interface{}, enc string) error {
 	return json.NewDecoder(base64.NewDecoder(base64.StdEncoding, strings.NewReader(enc))).Decode(v)
 }

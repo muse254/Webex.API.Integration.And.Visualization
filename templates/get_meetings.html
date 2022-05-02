@@ -18,7 +18,9 @@
         <div style="padding-bottom: 20px;">
             <h3>Title: {{.Title}}</h3>
             <p>ID: {{.ID}}</p>
+            {{if .Agenda}}
             <p>Agenda: {{.Agenda}}</p>
+            {{end}}
             <p>Start: {{.Start}}</p>
             <p>End: {{.End}}</p>
             <a href="/api/get_analytics?id={{.ID}}">Get Analytics</a>

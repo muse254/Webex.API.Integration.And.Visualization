@@ -16,6 +16,8 @@ const (
 )
 
 // WebexAPIClient is a convenience wrapper that will be used to make API calls to the Webex API.
+// It holds the client_id, client_secret, redirect_uri, and access_token required for API calls.
+// Values are also bound to the client and saved as a cookie.
 type WebexAPIClient struct {
 	ClientID     string       `json:"client_id"`
 	ClientSecret string       `json:"client_secret"`
@@ -178,7 +180,7 @@ func (c *WebexAPIClient) GetMeetingQualities(meetingID string, tries int) (*Meet
 	}
 
 	req.URL.RawQuery = (url.Values{
-		"meetingType": []string{"meeting"},
+		"meetingId": []string{meetingID},
 	}).Encode()
 	req.Header.Add("Authorization", "Bearer "+c.Auth.AccessToken)
 

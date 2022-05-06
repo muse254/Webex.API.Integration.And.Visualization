@@ -50,7 +50,10 @@ func WebexApplicationServer() error {
 		}
 	})
 	http.HandleFunc("/init", init_flow(host))
+
+	// "/auth" is called by Webex on redirect from the OAuth flow.
 	http.HandleFunc("/auth", auth(host))
+
 	http.HandleFunc("/api", func(w http.ResponseWriter, r *http.Request) {
 		// check if cookie exists for API calls
 		_, err := r.Cookie("WebexAPIClient")
@@ -96,6 +99,7 @@ func init_flow(host string) http.HandlerFunc {
 			Name:  "OAuthRequest",
 			Value: oauthReqStr,
 		}
+		// The server is stateless and a dabatabase is not required  because the OAuthCode is valid for small period of time and client-bound.
 		http.SetCookie(w, cookie)
 
 		// redirect to Webex, calling the auth endpoint
@@ -120,9 +124,6 @@ func init_flow(host string) http.HandlerFunc {
 // The request will be like so: http://your-server.com/auth?code=<OAuthCode>
 func auth(host string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// log the complete path
-		fmt.Println(r.URL.String())
-
 		code := r.URL.Query().Get("code")
 		if code == "" {
 			// redirect to error page

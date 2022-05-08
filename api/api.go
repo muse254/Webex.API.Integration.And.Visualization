@@ -8,6 +8,9 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"Webex.API.Integration.And.Visualization/persist"
+	"Webex.API.Integration.And.Visualization/types"
 )
 
 const (
@@ -19,10 +22,10 @@ const (
 // It holds the client_id, client_secret, redirect_uri, and access_token required for API calls.
 // Values are also bound to the client and saved as a cookie.
 type WebexAPIClient struct {
-	ClientID     string       `json:"client_id"`
-	ClientSecret string       `json:"client_secret"`
-	RedirectURI  string       `json:"redirect_uri"`
-	Auth         AuthResponse `json:"auth"`
+	ClientID     string             `json:"client_id"`
+	ClientSecret string             `json:"client_secret"`
+	RedirectURI  string             `json:"redirect_uri"`
+	Auth         types.AuthResponse `json:"auth"`
 }
 
 // When the user successfully authorizes the application, the OAuth code is retrieved from the redirect handler and
@@ -52,7 +55,7 @@ func NewWebexAPIClient(OAuthCode, clientID, clientSecret, redirectURI string) (*
 
 	// when the OAuth provide is invalid, the response will be a 401 error
 	if resp.StatusCode == http.StatusUnauthorized {
-		var errResponse HTTP4XXError
+		var errResponse types.HTTP4XXError
 		if json.NewDecoder(resp.Body).Decode(&errResponse); err != nil {
 			return nil, err
 		}
@@ -61,7 +64,7 @@ func NewWebexAPIClient(OAuthCode, clientID, clientSecret, redirectURI string) (*
 	}
 
 	// parse the response body
-	var authResp AuthResponse
+	var authResp types.AuthResponse
 	if err := json.NewDecoder(resp.Body).Decode(&authResp); err != nil {
 		return nil, err
 	}
@@ -75,7 +78,7 @@ func NewWebexAPIClient(OAuthCode, clientID, clientSecret, redirectURI string) (*
 }
 
 // ListMeeting lists all meetings that are accessible to the client account.
-func (c *WebexAPIClient) ListMeetings(tries int) (*MeetingsList, error) {
+func (c *WebexAPIClient) ListMeetings(tries int) (*types.MeetingsList, error) {
 	if tries > 3 {
 		return nil, fmt.Errorf("failed to get meetings from API, StatusCode: StatusUnauthorized")
 	}
@@ -99,7 +102,7 @@ func (c *WebexAPIClient) ListMeetings(tries int) (*MeetingsList, error) {
 	switch resp.StatusCode {
 	case http.StatusOK:
 		{
-			var meetings MeetingsList
+			var meetings types.MeetingsList
 			if err := json.NewDecoder(resp.Body).Decode(&meetings); err != nil {
 				return nil, err
 			}
@@ -122,7 +125,7 @@ func (c *WebexAPIClient) ListMeetings(tries int) (*MeetingsList, error) {
 }
 
 // GetMeeting gets a meeting by ID.
-func (c *WebexAPIClient) GetMeeting(meetingID string, tries int) (*MeetingSeries, error) {
+func (c *WebexAPIClient) GetMeeting(meetingID string, tries int) (*types.MeetingSeries, error) {
 	if tries > 3 {
 		return nil, fmt.Errorf("failed to get meeting from API, StatusCode: StatusUnauthorized")
 	}
@@ -146,7 +149,7 @@ func (c *WebexAPIClient) GetMeeting(meetingID string, tries int) (*MeetingSeries
 	switch resp.StatusCode {
 	case http.StatusOK:
 		{
-			var meeting MeetingSeries
+			var meeting types.MeetingSeries
 			if err := json.NewDecoder(resp.Body).Decode(&meeting); err != nil {
 				return nil, err
 			}
@@ -169,7 +172,7 @@ func (c *WebexAPIClient) GetMeeting(meetingID string, tries int) (*MeetingSeries
 }
 
 // GetMeetingQualities gets the qualities of a meeting.
-func (c *WebexAPIClient) GetMeetingQualities(meetingID string, tries int) (*MeetingQualities, error) {
+func (c *WebexAPIClient) GetMeetingQualities(db *persist.Persist, meetingID string, tries int) (*types.MeetingQualities, error) {
 	if tries > 3 {
 		return nil, fmt.Errorf("failed to get meeting quality from API, StatusCode: StatusUnauthorized")
 	}
@@ -192,20 +195,27 @@ func (c *WebexAPIClient) GetMeetingQualities(meetingID string, tries int) (*Meet
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		{
-			var meetingQualities MeetingQualities
-			if err := json.NewDecoder(resp.Body).Decode(&meetingQualities); err != nil {
-				return nil, err
-			}
-
-			return &meetingQualities, nil
+		var meetingQualities types.MeetingQualities
+		if err := json.NewDecoder(resp.Body).Decode(&meetingQualities); err != nil {
+			return nil, err
 		}
+
+		return &meetingQualities, nil
+
+	case http.StatusTooManyRequests: // this StatusCode is hit when the rate limit of 1 request per 5 minutes is hit
+		// retrieve meeting qualities from persitance storage.
+		data, err := db.RetriveAnalyticsData(c.ClientID, meetingID)
+		if err != nil {
+			return nil, err
+		}
+
+		return data, nil
 
 	case http.StatusUnauthorized:
 		if err = c.refreshToken(); err != nil {
 			return nil, err
 		}
-		return c.GetMeetingQualities(meetingID, tries+1)
+		return c.GetMeetingQualities(db, meetingID, tries+1)
 
 	case http.StatusNoContent:
 		return nil, nil
@@ -217,7 +227,7 @@ func (c *WebexAPIClient) GetMeetingQualities(meetingID string, tries int) (*Meet
 
 // When the access_token expires or is invalid, the refresh token is used to generate a new access token.
 func (c *WebexAPIClient) refreshToken() error {
-	data, err := json.Marshal(RefreshTokenRequest{
+	data, err := json.Marshal(types.RefreshTokenRequest{
 		GrantType:    "refresh_token",
 		ClientID:     c.ClientID,
 		ClientSecret: c.ClientSecret,
@@ -240,7 +250,7 @@ func (c *WebexAPIClient) refreshToken() error {
 
 	// when the refresh token is expired, the response will be a 400 error
 	if resp.StatusCode == http.StatusBadRequest {
-		var errResponse HTTP4XXError
+		var errResponse types.HTTP4XXError
 		if json.NewDecoder(resp.Body).Decode(&errResponse); err != nil {
 			return err
 		}
@@ -249,7 +259,7 @@ func (c *WebexAPIClient) refreshToken() error {
 	}
 
 	// parse the response body
-	var authResp AuthResponse
+	var authResp types.AuthResponse
 	if err := json.NewDecoder(resp.Body).Decode(&authResp); err != nil {
 		return err
 	}

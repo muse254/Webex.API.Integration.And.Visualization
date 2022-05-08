@@ -3,6 +3,8 @@ package api
 import (
 	"reflect"
 	"testing"
+
+	"Webex.API.Integration.And.Visualization/types"
 )
 
 func TestEncodeDecodeFromBase64(t *testing.T) {
@@ -10,7 +12,7 @@ func TestEncodeDecodeFromBase64(t *testing.T) {
 		ClientID:     "clientID",
 		ClientSecret: "clientSecret",
 		RedirectURI:  "redirectURI",
-		Auth: AuthResponse{
+		Auth: types.AuthResponse{
 			AccessToken:  "accessToken",
 			RefreshToken: "refreshToken",
 			ExpiresIn:    100,

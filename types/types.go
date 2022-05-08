@@ -1,4 +1,4 @@
-package api
+package types
 
 // AuthResponse is returned on successful authorization. The access token is to be used in susbsequent requests.
 type AuthResponse struct {
@@ -88,11 +88,12 @@ type MeetingSeries struct {
 }
 
 type MeetingQualities struct {
-	Items []MediaSessionQuality `json:"items"`
+	MeetingID     string                `json:"-"`
+	MediaSessions []MediaSessionQuality `json:"items"`
 }
 
 type MediaSessionQuality struct {
-	MeetingId        string `json:"meetingId"`
+	MeetingID        string `json:"meetingId"`
 	DisplayName      string `json:"displayName"`
 	Email            string `json:"email"`
 	Joined           string `json:"joined"`

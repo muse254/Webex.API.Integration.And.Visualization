@@ -11,10 +11,13 @@ import (
 	"net/url"
 	"os"
 	"strings"
+
+	"Webex.API.Integration.And.Visualization/persist"
+	"Webex.API.Integration.And.Visualization/types"
 )
 
 // WebexApplicationServer is the server for the Webex Application.
-func WebexApplicationServer() error {
+func WebexApplicationServer(db *persist.Persist) error {
 	// load the server's host
 	host := os.Getenv("HOST")
 	if host == "" {
@@ -66,7 +69,7 @@ func WebexApplicationServer() error {
 		http.ServeFile(w, r, "./templates/api_calls.html")
 	})
 	http.HandleFunc("/api/get_meetings", getMeetings(host))
-	http.HandleFunc("/api/get_analytics", getAnalytics(host))
+	http.HandleFunc("/api/get_analytics", getAnalytics(db, host))
 
 	return http.ListenAndServe(":3000", nil)
 }
@@ -81,7 +84,7 @@ func init_flow(host string) http.HandlerFunc {
 
 		// parse the request form
 		r.ParseForm()
-		oauthReq := OAuthRequest{
+		oauthReq := types.OAuthRequest{
 			ClientID:     strings.TrimSpace(r.FormValue("client_id")),
 			ClientSecret: strings.TrimSpace(r.FormValue("client_secret")),
 			Scope:        "analytics:read_all meeting:schedules_read",
@@ -140,7 +143,7 @@ func auth(host string) http.HandlerFunc {
 		}
 
 		// Decode the OAuth code from the cookie
-		var oauthReq OAuthRequest
+		var oauthReq types.OAuthRequest
 		if err := decodeFromBase64(&oauthReq, cookie.Value); err != nil {
 			// redirect to error page
 			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
@@ -202,7 +205,7 @@ func getMeetings(host string) http.HandlerFunc {
 	}
 }
 
-func getAnalytics(host string) http.HandlerFunc {
+func getAnalytics(db *persist.Persist, host string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// retrieve the id from path
 		id := r.URL.Query().Get("id")
@@ -227,7 +230,7 @@ func getAnalytics(host string) http.HandlerFunc {
 		}
 
 		// fetch the analytics data
-		qualities, err := client.GetMeetingQualities(id, 0)
+		qualities, err := client.GetMeetingQualities(db, id, 0)
 		if err != nil {
 			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
 			return
@@ -248,7 +251,7 @@ func getAnalytics(host string) http.HandlerFunc {
 // errorPage is the error page that is displayed when an error occurs.
 func errorPage(w io.Writer, errorMsg string) error {
 	tmpl, _ := template.ParseFiles("./templates/generic_page.html")
-	return tmpl.Execute(w, GenericPage{
+	return tmpl.Execute(w, types.GenericPage{
 		Heading:          "Error",
 		Message:          errorMsg,
 		ShowHomeRedirect: true,
@@ -259,7 +262,7 @@ func errorPage(w io.Writer, errorMsg string) error {
 // apiCalls page
 func messagePage(w io.Writer, message string, apiRedirect bool) error {
 	tmpl, _ := template.ParseFiles("./templates/generic_page.html")
-	return tmpl.Execute(w, GenericPage{
+	return tmpl.Execute(w, types.GenericPage{
 		Heading:          "Message",
 		Message:          message,
 		ShowAPIRedirect:  apiRedirect,

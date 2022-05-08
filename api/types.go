@@ -143,8 +143,8 @@ type MediaQualityData struct {
 }
 
 type Resources struct {
-	ProcessAverageCPU []string `json:"processAverageCPU"`
-	ProcessMaxCPU     []string `json:"processMaxCPU"`
-	SystemAverageCPU  []string `json:"systemAverageCPU"`
-	SystemMaxCPU      []string `json:"systemMaxCPU"`
+	ProcessAverageCPU []float32 `json:"processAverageCPU"`
+	ProcessMaxCPU     []float32 `json:"processMaxCPU"`
+	SystemAverageCPU  []float32 `json:"systemAverageCPU"`
+	SystemMaxCPU      []float32 `json:"systemMaxCPU"`
 }

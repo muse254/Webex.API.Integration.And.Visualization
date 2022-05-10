@@ -3,6 +3,7 @@ package persist
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 
 	"Webex.API.Integration.And.Visualization/types"
 )
@@ -30,6 +31,11 @@ func NewPersist(db *sql.DB) (*Persist, error) {
 // One can only make one call per 5 min for analytics data for single ID.
 // This function assumes the successful authorization happened for client_id.
 func (p *Persist) SaveAnalyticsData(meetingID, clientID, dataDump string) error {
+	// validate that the data dump is non-empty
+	if len(dataDump) == 0 {
+		return fmt.Errorf("data dump is empty")
+	}
+
 	// save data to db
 	_, err := p.db.Exec(
 		"INSERT INTO meeting_qualities (meeting_id, client_id, data_dump) VALUES (?, ?, ?)",

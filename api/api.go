@@ -2,8 +2,11 @@ package api
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -195,9 +198,19 @@ func (c *WebexAPIClient) GetMeetingQualities(db *persist.Persist, meetingID stri
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		var meetingQualities types.MeetingQualities
-		if err := json.NewDecoder(resp.Body).Decode(&meetingQualities); err != nil {
+		buf, err := io.ReadAll(resp.Body)
+		if err != nil {
 			return nil, err
+		}
+
+		var meetingQualities types.MeetingQualities
+		if err := json.Unmarshal(buf, &meetingQualities); err != nil {
+			return nil, err
+		}
+
+		// if the meeting qualities fet was a success and decoding was successful, persist to db
+		if err := db.SaveAnalyticsData(meetingID, c.ClientID, string(buf)); err != nil {
+			log.Printf("error on SaveAnalyticsData(): %s\n", err.Error())
 		}
 
 		return &meetingQualities, nil
@@ -206,6 +219,10 @@ func (c *WebexAPIClient) GetMeetingQualities(db *persist.Persist, meetingID stri
 		// retrieve meeting qualities from persitance storage.
 		data, err := db.RetriveAnalyticsData(c.ClientID, meetingID)
 		if err != nil {
+			if err == sql.ErrNoRows {
+				// data was never persisted due to error in the parsing process
+				return nil, fmt.Errorf("failed to get meeting qualities from API, StatusCode: %s, try after 5 min", resp.Status)
+			}
 			return nil, err
 		}
 

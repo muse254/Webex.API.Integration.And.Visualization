@@ -134,12 +134,12 @@ type MediaQualityData struct {
 	StartTime        string    `json:"startTime"`
 	EndTime          string    `json:"endTime"`
 	PacketLoss       []float32 `json:"packetLoss"`
-	Latency          []int     `json:"latency"`
-	ResolutionHeight []int     `json:"resolutionHeight,omitempty"`
-	FrameRate        []int     `json:"frameRate,omitempty"`
-	MediaBitRate     []int     `json:"mediaBitRate"`
+	Latency          []float32 `json:"latency"`
+	ResolutionHeight []float32 `json:"resolutionHeight,omitempty"`
+	FrameRate        []float32 `json:"frameRate,omitempty"`
+	MediaBitRate     []float32 `json:"mediaBitRate"`
 	Codec            string    `json:"codec"`
-	Jitter           []int     `json:"jitter"`
+	Jitter           []float32 `json:"jitter"`
 	TransportType    string    `json:"transportType"`
 }
 

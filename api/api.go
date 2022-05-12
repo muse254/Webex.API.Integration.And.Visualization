@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"Webex.API.Integration.And.Visualization/persist"
 	"Webex.API.Integration.And.Visualization/types"
@@ -91,7 +92,12 @@ func (c *WebexAPIClient) ListMeetings(tries int) (*types.MeetingsList, error) {
 		return nil, err
 	}
 
+	now := time.Now()
+	from := now.AddDate(0, 0, -30)
+
 	req.URL.RawQuery = (url.Values{
+		"to":          []string{now.Format(time.RFC3339)},
+		"from":        []string{from.Format(time.RFC3339)},
 		"meetingType": []string{"meeting"},
 	}).Encode()
 	req.Header.Add("Authorization", "Bearer "+c.Auth.AccessToken)

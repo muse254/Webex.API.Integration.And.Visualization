@@ -18,7 +18,7 @@ type Persist struct {
 func NewPersist(db *sql.DB) (*Persist, error) {
 	// create if not exists the table
 	_, err := db.Exec(
-		"CREATE TABLE IF NOT EXISTS meeting_qualities (meeting_id TEXT, client_id TEXT, data_dump TEXT)",
+		"CREATE TABLE IF NOT EXISTS meeting_qualities (meeting_id TEXT PRIMARY KEY, client_id TEXT, data_dump TEXT)",
 	)
 	if err != nil {
 		return nil, err
@@ -36,10 +36,11 @@ func (p *Persist) SaveAnalyticsData(meetingID, clientID, dataDump string) error 
 		return fmt.Errorf("data dump is empty")
 	}
 
+	// check if data exists, if it does update
 	// save data to db
 	_, err := p.db.Exec(
-		"INSERT INTO meeting_qualities (meeting_id, client_id, data_dump) VALUES (?, ?, ?)",
-		meetingID, clientID, dataDump,
+		"INSERT INTO meeting_qualities (meeting_id, client_id, data_dump) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE client_id=?, data_dump=?",
+		meetingID, clientID, dataDump, clientID, dataDump,
 	)
 
 	return err

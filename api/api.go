@@ -133,53 +133,6 @@ func (c *WebexAPIClient) ListMeetings(tries int) (*types.MeetingsList, error) {
 	}
 }
 
-// GetMeeting gets a meeting by ID.
-func (c *WebexAPIClient) GetMeeting(meetingID string, tries int) (*types.MeetingSeries, error) {
-	if tries > 3 {
-		return nil, fmt.Errorf("failed to get meeting from API, StatusCode: StatusUnauthorized")
-	}
-
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("https://webexapis.com/v1/meetings/%s", meetingID), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	req.URL.RawQuery = (url.Values{
-		"meetingType": []string{"meeting"},
-	}).Encode()
-	req.Header.Add("Authorization", "Bearer "+c.Auth.AccessToken)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	switch resp.StatusCode {
-	case http.StatusOK:
-		{
-			var meeting types.MeetingSeries
-			if err := json.NewDecoder(resp.Body).Decode(&meeting); err != nil {
-				return nil, err
-			}
-
-			return &meeting, nil
-		}
-
-	case http.StatusUnauthorized:
-		if err = c.refreshToken(); err != nil {
-			return nil, err
-		}
-		return c.GetMeeting(meetingID, tries+1)
-
-	case http.StatusNoContent:
-		return nil, nil
-
-	default:
-		return nil, fmt.Errorf("failed to get meeting from API, StatusCode: %s", resp.Status)
-	}
-}
-
 // GetMeetingQualities gets the qualities of a meeting.
 func (c *WebexAPIClient) GetMeetingQualities(db *persist.Persist, meetingID string, tries int) (*types.MeetingQualities, error) {
 	if tries > 3 {

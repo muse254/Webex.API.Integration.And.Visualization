@@ -69,7 +69,9 @@ func WebexApplicationServer(db *persist.Persist) error {
 		http.ServeFile(w, r, "./templates/api_calls.html")
 	})
 	http.HandleFunc("/api/get_meetings", getMeetings(host))
-	http.HandleFunc("/api/get_analytics", getAnalytics(db, host))
+	http.HandleFunc("/api/get_analytics/page", analyticsVisualization(db, host))
+	http.HandleFunc("/api/get_analytics/file", dowloadAnalyticsFile(db, host))
+	http.HandleFunc("/api/get_analytics/stream", analyticsDataAPI(db, host))
 
 	return http.ListenAndServe(":3000", nil)
 }
@@ -205,47 +207,114 @@ func getMeetings(host string) http.HandlerFunc {
 	}
 }
 
-func getAnalytics(db *persist.Persist, host string) http.HandlerFunc {
+func analyticsVisualization(db *persist.Persist, host string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// retrieve the id from path
-		id := r.URL.Query().Get("id")
-		if id == "" {
-			// redirect to error page
-			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, "No meeting id provided in path"), http.StatusSeeOther)
-			return
-		}
-
-		// check where the cookie exists from client, if not redirect to error page
-		cookie, err := r.Cookie("WebexAPIClient")
+		qualities, err := analyticsCommonfetch(r, db, host)
 		if err != nil {
-			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, "Complete the authentication flow."), http.StatusSeeOther)
-			return
+			http.Redirect(w, r, err.Error(), http.StatusSeeOther)
 		}
 
-		// get WebexAPIClient from cookie
-		var client WebexAPIClient
-		if err := decodeFromBase64(&client, cookie.Value); err != nil {
-			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
-			return
-		}
+		data, _ := json.Marshal(qualities)
+		t, _ := template.ParseFiles("./templates/analytics_visualization.html")
+		t.Execute(w, string(data))
+	}
+}
 
-		// fetch the analytics data
-		qualities, err := client.GetMeetingQualities(db, id, 0)
+func dowloadAnalyticsFile(db *persist.Persist, host string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		qualities, err := analyticsCommonfetch(r, db, host)
 		if err != nil {
-			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
-			return
+			http.Redirect(w, r, err.Error(), http.StatusSeeOther)
 		}
 
-		// render the meeting qualities page, pretty print the qualities as json
+		// pretty print the qualities as json
 		data, err := json.MarshalIndent(qualities, "", "\t")
 		if err != nil {
 			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
 			return
 		}
 
-		t, _ := template.ParseFiles("./templates/get_analytics.html")
-		t.Execute(w, string(data))
+		// write the data as a binary stream to client that will be donloaded as file
+		w.Header().Add("Content-Disposition", fmt.Sprintf("attachment; filename=meeting_analytics_%s.json)", qualities.MeetingID))
+		w.Header().Add("Content-Type", "application/octet-stream")
+		w.Write(data)
 	}
+}
+
+func analyticsDataAPI(db *persist.Persist, host string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// get the id from the path
+		id := r.URL.Query().Get("id")
+		if id == "" {
+			// redirect to error page
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, "No meeting id provided in path"), http.StatusSeeOther)
+		}
+
+		// the cookie is passed as request param from Javascript
+		cookies := r.URL.Query().Get("cookies")
+		if cookies == "" {
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, "Complete the authentication flow."), http.StatusSeeOther)
+		}
+
+		cookie, err := getCookieValue(cookies, "WebexAPIClient")
+		if err != nil || cookie == "" {
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, "Complete the authentication flow."), http.StatusSeeOther)
+		}
+
+		// get WebexAPIClient from cookie
+		var client WebexAPIClient
+		if err := decodeFromBase64(&client, cookie); err != nil {
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
+		}
+
+		// fetch analytics data
+		qualities, err := client.GetMeetingQualities(db, id, 0)
+		if err != nil {
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
+		}
+
+		// prepare to plug in to template
+		jsonChartData := types.NewJSONChartData(qualities)
+
+		// write as JSON to client
+		if err = json.NewEncoder(w).Encode(jsonChartData); err != nil {
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
+			return
+		}
+
+		w.Header().Add("Content-Type", "application/json")
+	}
+
+}
+
+func analyticsCommonfetch(r *http.Request, db *persist.Persist, host string) (*types.MeetingQualities, error) {
+	// get the id from the path
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		// redirect to error page
+		return nil, fmt.Errorf("%s/error?msg=%s", host, "No meeting id provided in path")
+
+	}
+
+	// check where the cookie exists from client, if not redirect to error page
+	cookie, err := r.Cookie("WebexAPIClient")
+	if err != nil {
+		return nil, fmt.Errorf("%s/error?msg=%s", host, "Complete the authentication flow.")
+	}
+
+	// get WebexAPIClient from cookie
+	var client WebexAPIClient
+	if err := decodeFromBase64(&client, cookie.Value); err != nil {
+		return nil, fmt.Errorf("%s/error?msg=%s", host, err.Error())
+	}
+
+	// fetch analytics data
+	qualities, err := client.GetMeetingQualities(db, id, 0)
+	if err != nil {
+		return nil, fmt.Errorf("%s/error?msg=%s", host, err.Error())
+	}
+
+	return qualities, nil
 }
 
 // errorPage is the error page that is displayed when an error occurs.
@@ -285,4 +354,18 @@ func encodeToBase64(v interface{}) (string, error) {
 // decodeFromBase64 decodes a base64 string to a non-pointer type
 func decodeFromBase64(v interface{}, enc string) error {
 	return json.NewDecoder(base64.NewDecoder(base64.StdEncoding, strings.NewReader(enc))).Decode(v)
+}
+
+// getWebexAPIClientCookie parses the cookies string and retrives the "cookieName" key cookie value
+func getCookieValue(cookies, cookieName string) (string, error) {
+	// Sample cookies string: "username=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
+	for _, cookie := range strings.Split(cookies, ";") {
+		// if prefix is "cookieName", split at "=" & return RHS
+		cookie = strings.TrimSpace(cookie)
+		if strings.HasPrefix(cookie, cookieName) {
+			return strings.Split(cookie, "=")[1], nil
+		}
+	}
+
+	return "", fmt.Errorf(`"%s" not found in cookies value`, cookieName)
 }

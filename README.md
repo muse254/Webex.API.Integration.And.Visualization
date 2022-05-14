@@ -1,5 +1,15 @@
 # Integration Visualization with Webex API
 
+## Basics
+
+### REST APIS
+
+REST stands for Representational State Trasfer. This is an architecture that employs an application program interface (API) using HTTP requests to send and receive data. In a RESTful service there resources behind it can be accessed and manipulated using GET, POST, PUT and DELETE HTTP methods. The transfer mime type used in most case is JSON but other [MIME TYPES]() can be used
+
+### OAuth
+
+## Intoduction
+
 The program code is written in Golang and HTML. The frontend is rendered as a static site.
 
 The application is focused on fetching `Meeting Analytics Quality` data, this data is only accessible for `1 request every 5 minutes`. Therefore, there is need to have persitance in our application. The program uses an SQlite database for this just to allow for the fault tolerance on the part of the client making multiple requests. SQlite was chosen because it is a simple, easy to use and requires little to no setup to have it working. The data from the metrics is not interpreted or manipulated in any way, only a `read` and `write` mechanism exists.
@@ -29,5 +39,13 @@ The `access_token` is used to request for any resources under the scope it was a
 ## APIs
 
 Our integration is focused on checking on the meeting analytics quality and is minimal in the number of APIs it uses.
-1. First, we use [List Meetings API](https://developer.webex.com/docs/api/v1/meetings/list-meetings) to request for all meetings available to us. With this we can use their `meeting_id`s in the next API.
-2. Lastly, we use []
+1. First, we use [List Meetings API](https://developer.webex.com/docs/api/v1/meetings/list-meetings) to request for all meetings available to us. With this we can use their `meeting_id`s in the next API. the JSON response on success we get is:
+```json
+```
+
+2. Lastly, we use [Meeting Qualities](https://developer.webex.com/docs/api/v1/meeting-qualities/get-meeting-qualities) to request for meeting quality data provided a specific `meeting_id` is provided in the request parameters. The JSON response on success we get is:
+```json
+```
+
+## Visualization
+

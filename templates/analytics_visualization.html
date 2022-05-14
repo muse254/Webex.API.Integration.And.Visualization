@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Visualization</title>
+
+    <!--Load the AJAX API-->
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+        // the JSON data is provided when the HTML is generated from this template.
+        var jsonStr = {{.}}; // Comes out as:    "{\"Name\":\"Center\",\"X\":100,\"Y\":200}";
+        var lineData = JSON.parse(jsonStr.replace(/\\/, ""));
+
+        google.charts.load('current', { 'packages': ['line'] });
+        google.charts.setOnLoadCallback(drawGraph(lineData.audio_in, "Audio In"));
+        google.charts.setOnLoadCallback(drawGraph(lineData.audio_out, "Audio Out"));
+        google.charts.setOnLoadCallback(drawGraph(lineData.video_in, "Video In"));
+        google.charts.setOnLoadCallback(drawGraph(lineData.video_out, "Video Out"));
+        google.charts.setOnLoadCallback(drawGraph(lineData.audio_in, "Share In"));
+        google.charts.setOnLoadCallback(drawGraph(lineData.audio_in, "Share Out"));
+
+        function drawGraph(values, title) {
+            return function () {
+                var data = google.visualization.Datable();
+                data.addColumn('number', 'Time Series Entry');
+                data.addColumn('number', 'Packet Loss');
+                data.addColumn('number', 'Latency');
+                data.addColumn('number', 'Jitter');
+                data.addColumn('number', 'Frame Rate');
+                /*[
+                    [1,  37.8, 80.8, 41.8, 11.1],
+                    [2,  30.9, 69.5, 32.4, 5.4],
+                ...]
+                */
+                data.addRows(values)
+
+                var options = {
+                    chart: {
+                        title: `Metric: ${title}`
+                    },
+                    width: 1000,
+                    height: 700
+                };
+
+                var graph = new google.charts.Line('line_graph');
+                graph.draw(data, google.charts.Line.convertOptions(options));
+            }
+        }
+
+    </script>
+</head>
+
+<body>
+    <!--Div that will hold the line graph-->
+    <div id="line_graph"></div>
+</body>
+
+</html>

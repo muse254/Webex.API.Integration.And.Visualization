@@ -15,14 +15,14 @@
         var lineData = JSON.parse(jsonStr.replace(/\\/, ""));
 
         google.charts.load('current', { 'packages': ['line'] });
-        google.charts.setOnLoadCallback(drawGraph(lineData.audio_in, "Audio In"));
-        google.charts.setOnLoadCallback(drawGraph(lineData.audio_out, "Audio Out"));
-        google.charts.setOnLoadCallback(drawGraph(lineData.video_in, "Video In"));
-        google.charts.setOnLoadCallback(drawGraph(lineData.video_out, "Video Out"));
-        google.charts.setOnLoadCallback(drawGraph(lineData.audio_in, "Share In"));
-        google.charts.setOnLoadCallback(drawGraph(lineData.audio_in, "Share Out"));
+        google.charts.setOnLoadCallback(drawGraph(lineData.audio_in, "Audio In", "audio_in"));
+        google.charts.setOnLoadCallback(drawGraph(lineData.audio_out, "Audio Out", "audio_out"));
+        google.charts.setOnLoadCallback(drawGraph(lineData.video_in, "Video In", "video_in"));
+        google.charts.setOnLoadCallback(drawGraph(lineData.video_out, "Video Out", "video_out"));
+        google.charts.setOnLoadCallback(drawGraph(lineData.audio_in, "Share In", "share_in"));
+        google.charts.setOnLoadCallback(drawGraph(lineData.audio_in, "Share Out", "share_out"));
 
-        function drawGraph(values, title) {
+        function drawGraph(values, title, div) {
             return function () {
                 var data = google.visualization.Datable();
                 data.addColumn('number', 'Time Series Entry');
@@ -45,7 +45,7 @@
                     height: 700
                 };
 
-                var graph = new google.charts.Line('line_graph');
+                var graph = new google.charts.Line(div);
                 graph.draw(data, google.charts.Line.convertOptions(options));
             }
         }
@@ -54,8 +54,13 @@
 </head>
 
 <body>
-    <!--Div that will hold the line graph-->
-    <div id="line_graph"></div>
+    <!--Divs that will hold the graphs-->
+    <div id="audio_in"></div>
+    <div id="audio_out"></div>
+    <div id="video_in"></div>
+    <div id="video_out"></div>
+    <div id="share_in"></div>
+    <div id="share_out"></div>
 </body>
 
 </html>

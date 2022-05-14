@@ -97,12 +97,12 @@ type JSONChartData struct {
 }
 
 func NewJSONChartData(qualities *MeetingQualities) *JSONChartData {
-	populateList := func(data []MediaQualityData, list [][]float32) {
+	populateList := func(data []MediaQualityData, list *[][]float32) {
 		// timeSeriesStamp
-		timeSeriesStamp := len(list)
+		timeSeriesStamp := len(*list)
 		for _, entryCollection := range data {
 			for i := range entryCollection.PacketLoss { // the metrics are symmetrical in count
-				list = append(list, []float32{
+				*list = append(*list, []float32{
 					float32(timeSeriesStamp + 1 + i), // Time series entry
 					entryCollection.PacketLoss[i],    // Packet Loss
 					entryCollection.Latency[i],       // Latency
@@ -113,31 +113,24 @@ func NewJSONChartData(qualities *MeetingQualities) *JSONChartData {
 		}
 	}
 
-	chartData := JSONChartData{
-		AudioIn:  [][]float32{},
-		AudioOut: [][]float32{},
-		VideoIn:  [][]float32{},
-		VideoOut: [][]float32{},
-		ShareIn:  [][]float32{},
-		ShareOut: [][]float32{},
-	}
+	var chartData JSONChartData
 	for _, item := range qualities.MediaSessions {
 		// data are in equal time series sets
 		// audio_in
-		populateList(item.AudioIn, chartData.AudioIn)
+		populateList(item.AudioIn, &chartData.AudioIn)
 		// audio_out
-		populateList(item.AudioOut, chartData.AudioOut)
+		populateList(item.AudioOut, &chartData.AudioOut)
 		// video_in
-		populateList(item.VideoIn, chartData.VideoIn)
+		populateList(item.VideoIn, &chartData.VideoIn)
 		// video_out
-		populateList(item.VideoOut, chartData.AudioOut)
+		populateList(item.VideoOut, &chartData.AudioOut)
 		// share_in
-		populateList(item.ShareIn, chartData.ShareIn)
+		populateList(item.ShareIn, &chartData.ShareIn)
 		// share_out
-		populateList(item.ShareOut, chartData.ShareOut)
+		populateList(item.ShareOut, &chartData.ShareOut)
 	}
 
-	return nil
+	return &chartData
 }
 
 type MeetingQualities struct {

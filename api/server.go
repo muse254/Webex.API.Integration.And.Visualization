@@ -71,7 +71,6 @@ func WebexApplicationServer(db *persist.Persist) error {
 	http.HandleFunc("/api/get_meetings", getMeetings(host))
 	http.HandleFunc("/api/get_analytics/page", analyticsVisualization(db, host))
 	http.HandleFunc("/api/get_analytics/file", dowloadAnalyticsFile(db, host))
-	http.HandleFunc("/api/get_analytics/stream", analyticsDataAPI(db, host))
 
 	return http.ListenAndServe(":3000", nil)
 }
@@ -214,7 +213,8 @@ func analyticsVisualization(db *persist.Persist, host string) http.HandlerFunc {
 			http.Redirect(w, r, err.Error(), http.StatusSeeOther)
 		}
 
-		data, _ := json.Marshal(qualities)
+		chartData := types.NewJSONChartData(qualities)
+		data, _ := json.Marshal(chartData)
 		t, _ := template.ParseFiles("./templates/analytics_visualization.html")
 		t.Execute(w, string(data))
 	}
@@ -239,52 +239,6 @@ func dowloadAnalyticsFile(db *persist.Persist, host string) http.HandlerFunc {
 		w.Header().Add("Content-Type", "application/octet-stream")
 		w.Write(data)
 	}
-}
-
-func analyticsDataAPI(db *persist.Persist, host string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// get the id from the path
-		id := r.URL.Query().Get("id")
-		if id == "" {
-			// redirect to error page
-			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, "No meeting id provided in path"), http.StatusSeeOther)
-		}
-
-		// the cookie is passed as request param from Javascript
-		cookies := r.URL.Query().Get("cookies")
-		if cookies == "" {
-			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, "Complete the authentication flow."), http.StatusSeeOther)
-		}
-
-		cookie, err := getCookieValue(cookies, "WebexAPIClient")
-		if err != nil || cookie == "" {
-			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, "Complete the authentication flow."), http.StatusSeeOther)
-		}
-
-		// get WebexAPIClient from cookie
-		var client WebexAPIClient
-		if err := decodeFromBase64(&client, cookie); err != nil {
-			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
-		}
-
-		// fetch analytics data
-		qualities, err := client.GetMeetingQualities(db, id, 0)
-		if err != nil {
-			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
-		}
-
-		// prepare to plug in to template
-		jsonChartData := types.NewJSONChartData(qualities)
-
-		// write as JSON to client
-		if err = json.NewEncoder(w).Encode(jsonChartData); err != nil {
-			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
-			return
-		}
-
-		w.Header().Add("Content-Type", "application/json")
-	}
-
 }
 
 func analyticsCommonfetch(r *http.Request, db *persist.Persist, host string) (*types.MeetingQualities, error) {

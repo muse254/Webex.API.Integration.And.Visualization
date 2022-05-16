@@ -71,6 +71,9 @@ func WebexApplicationServer(db *persist.Persist) error {
 	http.HandleFunc("/api/get_meetings", getMeetings(host))
 	http.HandleFunc("/api/get_analytics/page", analyticsVisualization(db, host))
 	http.HandleFunc("/api/get_analytics/file", dowloadAnalyticsFile(db, host))
+	http.HandleFunc("/api/get_analytics/hello", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("Hello World"))
+	})
 
 	return http.ListenAndServe(":3000", nil)
 }

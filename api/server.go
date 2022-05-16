@@ -211,9 +211,9 @@ func getMeetings(host string) http.HandlerFunc {
 
 func analyticsVisualization(db *persist.Persist, host string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		qualities, err := analyticsCommonfetch(r, db, host)
-		if err != nil {
-			http.Redirect(w, r, err.Error(), http.StatusSeeOther)
+		qualities, errUrl := analyticsCommonfetch(r, db, host)
+		if errUrl != "" {
+			http.Redirect(w, r, errUrl, http.StatusSeeOther)
 		}
 
 		chartData := types.NewJSONChartData(qualities)
@@ -225,9 +225,9 @@ func analyticsVisualization(db *persist.Persist, host string) http.HandlerFunc {
 
 func dowloadAnalyticsFile(db *persist.Persist, host string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		qualities, err := analyticsCommonfetch(r, db, host)
-		if err != nil {
-			http.Redirect(w, r, err.Error(), http.StatusSeeOther)
+		qualities, errUrl := analyticsCommonfetch(r, db, host)
+		if errUrl != "" {
+			http.Redirect(w, r, errUrl, http.StatusSeeOther)
 		}
 
 		// pretty print the qualities as json
@@ -244,34 +244,34 @@ func dowloadAnalyticsFile(db *persist.Persist, host string) http.HandlerFunc {
 	}
 }
 
-func analyticsCommonfetch(r *http.Request, db *persist.Persist, host string) (*types.MeetingQualities, error) {
+func analyticsCommonfetch(r *http.Request, db *persist.Persist, host string) (*types.MeetingQualities, string) {
 	// get the id from the path
 	id := r.URL.Query().Get("id")
 	if id == "" {
 		// redirect to error page
-		return nil, fmt.Errorf("%s/error?msg=%s", host, "No meeting id provided in path")
+		return nil, fmt.Sprintf("%s/error?msg=%s", host, "No meeting id provided in path")
 
 	}
 
 	// check where the cookie exists from client, if not redirect to error page
 	cookie, err := r.Cookie("WebexAPIClient")
 	if err != nil {
-		return nil, fmt.Errorf("%s/error?msg=%s", host, "Complete the authentication flow.")
+		return nil, fmt.Sprintf("%s/error?msg=%s", host, "Complete the authentication flow.")
 	}
 
 	// get WebexAPIClient from cookie
 	var client WebexAPIClient
 	if err := decodeFromBase64(&client, cookie.Value); err != nil {
-		return nil, fmt.Errorf("%s/error?msg=%s", host, err.Error())
+		return nil, fmt.Sprintf("%s/error?msg=%s", host, err.Error())
 	}
 
 	// fetch analytics data
 	qualities, err := client.GetMeetingQualities(db, id, 0)
 	if err != nil {
-		return nil, fmt.Errorf("%s/error?msg=%s", host, err.Error())
+		return nil, fmt.Sprintf("%s/error?msg=%s", host, err.Error())
 	}
 
-	return qualities, nil
+	return qualities, ""
 }
 
 // errorPage is the error page that is displayed when an error occurs.

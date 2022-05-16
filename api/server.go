@@ -214,6 +214,7 @@ func analyticsVisualization(db *persist.Persist, host string) http.HandlerFunc {
 		qualities, errUrl := analyticsCommonfetch(r, db, host)
 		if errUrl != "" {
 			http.Redirect(w, r, errUrl, http.StatusSeeOther)
+			return
 		}
 
 		chartData := types.NewJSONChartData(qualities)
@@ -228,6 +229,7 @@ func dowloadAnalyticsFile(db *persist.Persist, host string) http.HandlerFunc {
 		qualities, errUrl := analyticsCommonfetch(r, db, host)
 		if errUrl != "" {
 			http.Redirect(w, r, errUrl, http.StatusSeeOther)
+			return
 		}
 
 		// pretty print the qualities as json

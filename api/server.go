@@ -68,10 +68,10 @@ func WebexApplicationServer(db *persist.Persist) error {
 		// display all APIs calls page
 		http.ServeFile(w, r, "./templates/api_calls.html")
 	})
-	http.HandleFunc("/api/get_meetings", getMeetings(host))
-	http.HandleFunc("/api/get_analytics/page", analyticsVisualization(db, host))
-	http.HandleFunc("/api/get_analytics/file", dowloadAnalyticsFile(db, host))
-	http.HandleFunc("/api/get_analytics/hello", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/get_meetings_page", getMeetings(host))
+	http.HandleFunc("/get_analytics_page", analyticsVisualization(db, host))
+	http.HandleFunc("/get_analytics_file", dowloadAnalyticsFile(db, host))
+	http.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Hello World"))
 	})
 

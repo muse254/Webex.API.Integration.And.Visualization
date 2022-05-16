@@ -12,15 +12,15 @@
     <script type="text/javascript">
         // the JSON data is provided when the HTML is generated from this template.
         var jsonStr = {{.}}; // Comes out as:    "{\"Name\":\"Center\",\"X\":100,\"Y\":200}";
-        var lineData = JSON.parse(jsonStr.replace(/\\/, ""));
+        var lineData = JSON.parse(jsonStr.replace(/\\/, "")); // removing the extra backslashes
 
         google.charts.load('current', { 'packages': ['line'] });
         google.charts.setOnLoadCallback(drawGraph(lineData.audio_in, "Audio In", "audio_in"));
         google.charts.setOnLoadCallback(drawGraph(lineData.audio_out, "Audio Out", "audio_out"));
         google.charts.setOnLoadCallback(drawGraph(lineData.video_in, "Video In", "video_in"));
         google.charts.setOnLoadCallback(drawGraph(lineData.video_out, "Video Out", "video_out"));
-        google.charts.setOnLoadCallback(drawGraph(lineData.audio_in, "Share In", "share_in"));
-        google.charts.setOnLoadCallback(drawGraph(lineData.audio_in, "Share Out", "share_out"));
+        google.charts.setOnLoadCallback(drawGraph(lineData.share_in, "Share In", "share_in"));
+        google.charts.setOnLoadCallback(drawGraph(lineData.share_out, "Share Out", "share_out"));
 
         function drawGraph(values, title, div) {
             return function () {

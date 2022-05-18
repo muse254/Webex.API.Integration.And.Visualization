@@ -217,7 +217,12 @@ func analyticsVisualization(db *persist.Persist, host string) http.HandlerFunc {
 			return
 		}
 
-		chartData, err := types.NewJSONVisualData(qualities, r.URL.Query().Get("dp"))
+		dp := r.URL.Query().Get("dp")
+		if dp == "" {
+			dp = "audio_in"
+		}
+
+		chartData, err := types.NewJSONVisualData(qualities, dp)
 		if err != nil {
 			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
 			return
@@ -255,7 +260,7 @@ func dowloadAnalyticsFile(db *persist.Persist, host string) http.HandlerFunc {
 		}
 
 		// write the data as a binary stream to client that will be donloaded as file
-		w.Header().Add("Content-Disposition", fmt.Sprintf("attachment; filename=meeting_analytics_%s.json)", qualities.MeetingID))
+		w.Header().Add("Content-Disposition", fmt.Sprintf("attachment; filename=meeting_analytics_%s.json", qualities.MeetingID))
 		w.Header().Add("Content-Type", "application/octet-stream")
 		w.Write(data)
 	}

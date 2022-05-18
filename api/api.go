@@ -167,7 +167,7 @@ func (c *WebexAPIClient) GetMeetingQualities(db *persist.Persist, meetingID stri
 			return nil, err
 		}
 
-		// if the meeting qualities fet was a success and decoding was successful, persist to db
+		// if the meeting qualities fetch was a success and decoding was successful, persist to db
 		if err := db.SaveAnalyticsData(meetingID, c.ClientID, string(buf)); err != nil {
 			log.Printf("error on SaveAnalyticsData(): %s\n", err.Error())
 		}

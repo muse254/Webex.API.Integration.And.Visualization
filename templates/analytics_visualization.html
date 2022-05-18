@@ -11,56 +11,82 @@
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script type="text/javascript">
         // the JSON data is provided when the HTML is generated from this template.
-        var jsonStr = {{.}}; // Comes out as:    "{\"Name\":\"Center\",\"X\":100,\"Y\":200}";
-        var lineData = JSON.parse(jsonStr.replace(/\\/, "")); // removing the extra backslashes
+        var tempData = {{ .StrData }};
+        var packetLoss = tempData.packet_loss;
+        var latency = tempData.latency;
+        var jitter = tempData.jitter;
+        var frameRate = tempData.frame_rate;
 
         google.charts.load('current', { 'packages': ['line'] });
-        google.charts.setOnLoadCallback(drawGraph(lineData.audio_in, "Audio In", "audio_in"));
-        google.charts.setOnLoadCallback(drawGraph(lineData.audio_out, "Audio Out", "audio_out"));
-        google.charts.setOnLoadCallback(drawGraph(lineData.video_in, "Video In", "video_in"));
-        google.charts.setOnLoadCallback(drawGraph(lineData.video_out, "Video Out", "video_out"));
-        google.charts.setOnLoadCallback(drawGraph(lineData.share_in, "Share In", "share_in"));
-        google.charts.setOnLoadCallback(drawGraph(lineData.share_out, "Share Out", "share_out"));
+        google.charts.setOnLoadCallback(drawGraph("Packet Loss", packetLoss, "packet_loss")); // packet_loss
+        google.charts.setOnLoadCallback(drawGraph("Latency", latency, "latency")); // latency
+        google.charts.setOnLoadCallback(drawGraph("Jitter", jitter, "jitter")); // jitter
+        google.charts.setOnLoadCallback(drawGraph("FrameRate", frameRate, "frame_rate")); // frame_rate
 
-        function drawGraph(values, title, div) {
+        var counter = 0;
+        function drawGraph(title, values, div) {
             return function () {
-                var data = google.visualization.Datable();
+                if (values === undefined || values.length == 0) {
+                    return
+                }
+                var data = new google.visualization.DataTable();
                 data.addColumn('number', 'Time Series Entry');
-                data.addColumn('number', 'Packet Loss');
-                data.addColumn('number', 'Latency');
-                data.addColumn('number', 'Jitter');
-                data.addColumn('number', 'Frame Rate');
-                /*[
-                    [1,  37.8, 80.8, 41.8, 11.1],
-                    [2,  30.9, 69.5, 32.4, 5.4],
-                ...]
-                */
-                data.addRows(values)
+                data.addColumn('number', title);
+
+                for (let i = 0; i < values.length; i++) {
+                    data.addRow([i + 1, values[i]])
+                }
 
                 var options = {
                     chart: {
-                        title: `Metric: ${title}`
+                        title: `Data: ${title}`
                     },
                     width: 1000,
                     height: 700
                 };
 
-                var graph = new google.charts.Line(div);
+                var graph = new google.charts.Line(document.getElementById(div));
                 graph.draw(data, google.charts.Line.convertOptions(options));
             }
         }
-
     </script>
 </head>
 
 <body>
+    <section>
+        <p>Try other data:</p>
+        <ul>
+            {{ if ne .Actual.DataPoint "audio_in" }}
+            <li><a href="/get_analytics_page?id={{ .Actual.MeetingID }}&dp=audio_in">Visualize 'Audio In'</a></li>
+            {{end}}
+
+            {{ if ne .Actual.DataPoint "audio_out" }}
+            <li><a href="/get_analytics_page?id={{ .Actual.MeetingID }}&dp=audio_out">Visualize 'Audio Out'</a></li>
+            {{end}}
+
+            {{ if ne .Actual.DataPoint "video_in" }}
+            <li><a href="/get_analytics_page?id={{ .Actual.MeetingID }}&dp=video_in">Visualize 'Video In'</a></li>
+            {{end}}
+
+            {{ if ne .Actual.DataPoint "video_out" }}
+            <li><a href="/get_analytics_page?id={{ .Actual.MeetingID }}&dp=video_out">Visualize 'Video Out'</a></li>
+            {{end}}
+
+            {{ if ne .Actual.DataPoint "share_in" }}
+            <li><a href="/get_analytics_page?id={{ .Actual.MeetingID }}&dp=share_in">Visualize 'Share In'</a></li>
+            {{end}}
+
+            {{ if ne .Actual.DataPoint "share_out" }}
+            <li><a href="/get_analytics_page/id={{ .Actual.MeetingID }}&dp=share_out">Visualize 'Share Out'</a></li>
+            {{end}}
+        </ul>
+    </section>
     <!--Divs that will hold the graphs-->
-    <div id="audio_in"></div>
-    <div id="audio_out"></div>
-    <div id="video_in"></div>
-    <div id="video_out"></div>
-    <div id="share_in"></div>
-    <div id="share_out"></div>
+    <h1 id="title"> {{ .Actual.DataPoint }}, duration is between {{ .Actual.StartTime}} - {{ .Actual.EndTime }}</h1>
+    <div id="packet_loss"></div>
+    <div id="latency"></div>
+    <div id="jitter"></div>
+    <div id="frame_rate"></div>
 </body>
 
 </html>

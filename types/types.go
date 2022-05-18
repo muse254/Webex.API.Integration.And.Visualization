@@ -1,5 +1,7 @@
 package types
 
+import "errors"
+
 // AuthResponse is returned on successful authorization. The access token is to be used in susbsequent requests.
 type AuthResponse struct {
 	AccessToken           string `json:"access_token"`
@@ -87,50 +89,71 @@ type MeetingSeries struct {
 	IntegrationTags                     []string               `json:"integrationTags"`
 }
 
-type JSONChartData struct {
-	AudioIn  [][]float32 `json:"audio_in"`
-	AudioOut [][]float32 `json:"audio_out"`
-	VideoIn  [][]float32 `json:"video_in"`
-	VideoOut [][]float32 `json:"video_out"`
-	ShareIn  [][]float32 `json:"share_in"`
-	ShareOut [][]float32 `json:"share_out"`
+type VisualData struct {
+	MeetingID  string    `json:"meeting_id"`
+	DataPoint  string    `json:"data_point"`
+	StartTime  string    `json:"start_time"`
+	EndTime    string    `json:"end_time"`
+	PacketLoss []float32 `json:"packet_loss"`
+	Latency    []float32 `json:"latency"`
+	Jitter     []float32 `json:"jitter"`
+	FrameRate  []float32 `json:"frame_rate"`
 }
 
-func NewJSONChartData(qualities *MeetingQualities) *JSONChartData {
-	populateList := func(data []MediaQualityData, list *[][]float32) {
-		// timeSeriesStamp
-		timeSeriesStamp := len(*list)
-		for _, entryCollection := range data {
-			for i := range entryCollection.PacketLoss { // the metrics are symmetrical in count
-				*list = append(*list, []float32{
-					float32(timeSeriesStamp + 1 + i), // Time series entry
-					entryCollection.PacketLoss[i],    // Packet Loss
-					entryCollection.Latency[i],       // Latency
-					entryCollection.Jitter[i],        // Jitter
-					entryCollection.FrameRate[i],     // FrameRate
-				})
-			}
+func NewJSONVisualData(qualities *MeetingQualities, dp string) (*VisualData, error) {
+	if dp == "" {
+		return nil, errors.New("invalid request, 'dp' parameter not set")
+	}
+
+	// the quality over time is flattened, showing the start time and endtime for the last quality data
+	var (
+		start, end                             string
+		packetLoss, latency, jitter, frameRate []float32
+	)
+
+	populate := func(data []MediaQualityData) {
+		set := len(data)
+		start = data[0].StartTime
+		end = data[set-1].EndTime
+
+		for _, val := range data {
+			packetLoss = append(packetLoss, val.PacketLoss...)
+			latency = append(latency, val.Latency...)
+			jitter = append(jitter, val.Jitter...)
+			frameRate = append(frameRate, val.FrameRate...)
 		}
 	}
 
-	var chartData JSONChartData
-	for _, item := range qualities.MediaSessions {
-		// data are in equal time series sets
-		// audio_in
-		populateList(item.AudioIn, &chartData.AudioIn)
-		// audio_out
-		populateList(item.AudioOut, &chartData.AudioOut)
-		// video_in
-		populateList(item.VideoIn, &chartData.VideoIn)
-		// video_out
-		populateList(item.VideoOut, &chartData.AudioOut)
-		// share_in
-		populateList(item.ShareIn, &chartData.ShareIn)
-		// share_out
-		populateList(item.ShareOut, &chartData.ShareOut)
+	switch dp {
+	case "video_in":
+		populate(qualities.MediaSessions[0].VideoIn)
+
+	case "video_out":
+		populate(qualities.MediaSessions[0].VideoOut)
+
+	case "audio_in":
+		populate(qualities.MediaSessions[0].AudioIn)
+
+	case "audio_out":
+		populate(qualities.MediaSessions[0].AudioOut)
+
+	case "share_in":
+		populate(qualities.MediaSessions[0].ShareIn)
+
+	case "share_out":
+		populate(qualities.MediaSessions[0].ShareOut)
 	}
 
-	return &chartData
+	return &VisualData{
+		MeetingID:  qualities.MeetingID,
+		DataPoint:  dp,
+		StartTime:  start,
+		EndTime:    end,
+		PacketLoss: packetLoss,
+		Latency:    latency,
+		Jitter:     jitter,
+		FrameRate:  frameRate,
+	}, nil
 }
 
 type MeetingQualities struct {
@@ -179,13 +202,13 @@ type MediaQualityData struct {
 	SamplingInterval int       `json:"samplingInterval"`
 	StartTime        string    `json:"startTime"`
 	EndTime          string    `json:"endTime"`
-	PacketLoss       []float32 `json:"packetLoss"`
-	Latency          []float32 `json:"latency"`
+	PacketLoss       []float32 `json:"packetLoss,omitempty"`
+	Latency          []float32 `json:"latency,omitempty"`
 	ResolutionHeight []float32 `json:"resolutionHeight,omitempty"`
 	FrameRate        []float32 `json:"frameRate,omitempty"`
 	MediaBitRate     []float32 `json:"mediaBitRate"`
 	Codec            string    `json:"codec"`
-	Jitter           []float32 `json:"jitter"`
+	Jitter           []float32 `json:"jitter,omitempty"`
 	TransportType    string    `json:"transportType"`
 }
 

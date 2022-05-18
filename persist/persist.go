@@ -36,42 +36,10 @@ func (p *Persist) SaveAnalyticsData(meetingID, clientID, dataDump string) error 
 		return fmt.Errorf("data dump is empty")
 	}
 
-	// check if data exists, if it does update
-	// save data to db
-	_, err := p.db.Exec(
-		"INSERT INTO meeting_qualities (meeting_id, client_id, data_dump) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE client_id=?, data_dump=?",
-		meetingID, clientID, dataDump, clientID, dataDump,
-	)
-
+	// save data to db, replace if already exists
+	_, err := p.db.Exec("REPLACE INTO meeting_qualities (meeting_id, client_id, data_dump) VALUES (?, ?, ?)",
+		meetingID, clientID, dataDump)
 	return err
-}
-
-// RetieveAnalyticsData retrieves all analytics data.
-// This function assumes the successful authorization happened for client_id.
-func (p *Persist) RetrieveAllAnalyticsData(clientID string) ([]types.MeetingQualities, error) {
-	rows, err := p.db.Query("SELECT meeting_id, data_dump FROM meeting_qualities WHERE client_id = ?", clientID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var meetingQualities []types.MeetingQualities
-	for rows.Next() {
-		var meetingID, dataDump string
-		if err := rows.Scan(&meetingID, &dataDump); err != nil {
-			return nil, err
-		}
-
-		var data types.MeetingQualities
-		if err := json.Unmarshal([]byte(dataDump), &data); err != nil {
-			return nil, err
-		}
-
-		data.MeetingID = meetingID
-		meetingQualities = append(meetingQualities, data)
-	}
-
-	return meetingQualities, nil
 }
 
 // RetieveAnalyticsData retrieves the analytics data for a given meeting if present.
@@ -83,6 +51,9 @@ func (p *Persist) RetriveAnalyticsData(clientID, meetingID string) (*types.Meeti
 		"SELECT data_dump FROM meeting_qualities WHERE client_id = ? AND meeting_id = ?",
 		clientID, meetingID,
 	).Scan(&dataDump); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
 		return nil, err
 	}
 
@@ -92,4 +63,8 @@ func (p *Persist) RetriveAnalyticsData(clientID, meetingID string) (*types.Meeti
 
 	data.MeetingID = meetingID
 	return &data, nil
+}
+
+func (p *Persist) ReturnDB() *sql.DB {
+	return p.db
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -180,7 +181,7 @@ func auth(host string) http.HandlerFunc {
 	}
 }
 
-// getMeetings is the handler for the /api/get_meetings endpoint.
+// getMeetings is the handler for the /get_meetings_page endpoint.
 func getMeetings(host string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// check where the cookie exists from client, if not redirect to error page
@@ -217,10 +218,25 @@ func analyticsVisualization(db *persist.Persist, host string) http.HandlerFunc {
 			return
 		}
 
-		chartData := types.NewJSONChartData(qualities)
+		chartData, err := types.NewJSONVisualData(qualities, r.URL.Query().Get("dp"))
+		if err != nil {
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
+			return
+		}
+
 		data, _ := json.Marshal(chartData)
-		t, _ := template.ParseFiles("./templates/analytics_visualization.html")
-		t.Execute(w, string(data))
+		t, _ := template.ParseFiles("../templates/analytics_visualization.html")
+
+		if err = t.Execute(w, struct {
+			StrData string
+			Actual  *types.VisualData
+		}{
+			StrData: string(data),
+			Actual:  chartData,
+		}); err != nil {
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
+			return
+		}
 	}
 }
 

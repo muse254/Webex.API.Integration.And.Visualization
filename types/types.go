@@ -97,7 +97,6 @@ type VisualData struct {
 	PacketLoss []float32 `json:"packet_loss"`
 	Latency    []float32 `json:"latency"`
 	Jitter     []float32 `json:"jitter"`
-	FrameRate  []float32 `json:"frame_rate"`
 }
 
 func NewJSONVisualData(qualities *MeetingQualities, dp string) (*VisualData, error) {
@@ -107,8 +106,8 @@ func NewJSONVisualData(qualities *MeetingQualities, dp string) (*VisualData, err
 
 	// the quality over time is flattened, showing the start time and endtime for the last quality data
 	var (
-		start, end                             string
-		packetLoss, latency, jitter, frameRate []float32
+		start, end                  string
+		packetLoss, latency, jitter []float32
 	)
 
 	populate := func(data []MediaQualityData) {
@@ -120,7 +119,6 @@ func NewJSONVisualData(qualities *MeetingQualities, dp string) (*VisualData, err
 			packetLoss = append(packetLoss, val.PacketLoss...)
 			latency = append(latency, val.Latency...)
 			jitter = append(jitter, val.Jitter...)
-			frameRate = append(frameRate, val.FrameRate...)
 		}
 	}
 
@@ -152,7 +150,6 @@ func NewJSONVisualData(qualities *MeetingQualities, dp string) (*VisualData, err
 		PacketLoss: packetLoss,
 		Latency:    latency,
 		Jitter:     jitter,
-		FrameRate:  frameRate,
 	}, nil
 }
 

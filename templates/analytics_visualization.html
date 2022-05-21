@@ -21,7 +21,6 @@
         google.charts.setOnLoadCallback(drawGraph("Packet Loss", packetLoss, "packet_loss")); // packet_loss
         google.charts.setOnLoadCallback(drawGraph("Latency", latency, "latency")); // latency
         google.charts.setOnLoadCallback(drawGraph("Jitter", jitter, "jitter")); // jitter
-        google.charts.setOnLoadCallback(drawGraph("FrameRate", frameRate, "frame_rate")); // frame_rate
 
         var counter = 0;
         function drawGraph(title, values, div) {
@@ -77,7 +76,7 @@
             {{end}}
 
             {{ if ne .Actual.DataPoint "share_out" }}
-            <li><a href="/get_analytics_page/id={{ .Actual.MeetingID }}&dp=share_out">Visualize 'Share Out'</a></li>
+            <li><a href="/get_analytics_page?id={{ .Actual.MeetingID }}&dp=share_out">Visualize 'Share Out'</a></li>
             {{end}}
         </ul>
     </section>
@@ -86,7 +85,6 @@
     <div id="packet_loss"></div>
     <div id="latency"></div>
     <div id="jitter"></div>
-    <div id="frame_rate"></div>
 </body>
 
 </html>

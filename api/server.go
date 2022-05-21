@@ -5,12 +5,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+	"text/template"
 
 	"Webex.API.Integration.And.Visualization/persist"
 	"Webex.API.Integration.And.Visualization/types"
@@ -229,7 +229,11 @@ func analyticsVisualization(db *persist.Persist, host string) http.HandlerFunc {
 		}
 
 		data, _ := json.Marshal(chartData)
-		t, _ := template.ParseFiles("../templates/analytics_visualization.html")
+		t, err := template.ParseFiles("../templates/analytics_visualization.html")
+		if err != nil {
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
+			return
+		}
 
 		if err = t.Execute(w, struct {
 			StrData string

@@ -229,7 +229,7 @@ func analyticsVisualization(db *persist.Persist, host string) http.HandlerFunc {
 		}
 
 		data, _ := json.Marshal(chartData)
-		t, err := template.ParseFiles("../templates/analytics_visualization.html")
+		t, err := template.ParseFiles("./templates/analytics_visualization.html")
 		if err != nil {
 			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
 			return

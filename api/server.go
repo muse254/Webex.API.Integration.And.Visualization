@@ -211,7 +211,13 @@ func getMeetings(host string) http.HandlerFunc {
 
 func analyticsVisualization(db *persist.Persist, host string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		qualities, errUrl := analyticsCommonfetch(r, db, host)
+		id := r.URL.Query().Get("id")
+		if id == "" {
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, "No meeting ID provided"), http.StatusSeeOther)
+			return
+		}
+
+		qualities, errUrl := analyticsCommonfetch(r, db, id, host)
 		if errUrl != "" {
 			http.Redirect(w, r, errUrl, http.StatusSeeOther)
 			return
@@ -250,7 +256,13 @@ func analyticsVisualization(db *persist.Persist, host string) http.HandlerFunc {
 
 func dowloadAnalyticsFile(db *persist.Persist, host string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		qualities, errUrl := analyticsCommonfetch(r, db, host)
+		id := r.URL.Query().Get("id")
+		if id == "" {
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, "No meeting ID provided"), http.StatusSeeOther)
+			return
+		}
+
+		qualities, errUrl := analyticsCommonfetch(r, db, id, host)
 		if errUrl != "" {
 			http.Redirect(w, r, errUrl, http.StatusSeeOther)
 			return
@@ -270,15 +282,7 @@ func dowloadAnalyticsFile(db *persist.Persist, host string) http.HandlerFunc {
 	}
 }
 
-func analyticsCommonfetch(r *http.Request, db *persist.Persist, host string) (*types.MeetingQualities, string) {
-	// get the id from the path
-	id := r.URL.Query().Get("id")
-	if id == "" {
-		// redirect to error page
-		return nil, fmt.Sprintf("%s/error?msg=%s", host, "No meeting id provided in path")
-
-	}
-
+func analyticsCommonfetch(r *http.Request, db *persist.Persist, id, host string) (*types.MeetingQualities, string) {
 	// check where the cookie exists from client, if not redirect to error page
 	cookie, err := r.Cookie("WebexAPIClient")
 	if err != nil {
@@ -297,6 +301,7 @@ func analyticsCommonfetch(r *http.Request, db *persist.Persist, host string) (*t
 		return nil, fmt.Sprintf("%s/error?msg=%s", host, err.Error())
 	}
 
+	qualities.MeetingID = id
 	return qualities, ""
 }
 

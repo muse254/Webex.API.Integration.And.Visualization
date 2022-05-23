@@ -1,6 +1,8 @@
 package types
 
-import "errors"
+import (
+	"errors"
+)
 
 // AuthResponse is returned on successful authorization. The access token is to be used in susbsequent requests.
 type AuthResponse struct {
@@ -89,70 +91,6 @@ type MeetingSeries struct {
 	IntegrationTags                     []string               `json:"integrationTags"`
 }
 
-type VisualData struct {
-	MeetingID  string    `json:"meeting_id"`
-	DataPoint  string    `json:"data_point"`
-	StartTime  string    `json:"start_time"`
-	EndTime    string    `json:"end_time"`
-	PacketLoss []float32 `json:"packet_loss"`
-	Latency    []float32 `json:"latency"`
-	Jitter     []float32 `json:"jitter"`
-}
-
-func NewJSONVisualData(qualities *MeetingQualities, dp string) (*VisualData, error) {
-	if dp == "" {
-		return nil, errors.New("invalid request, 'dp' parameter not set")
-	}
-
-	// the quality over time is flattened, showing the start time and endtime for the last quality data
-	var (
-		start, end                  string
-		packetLoss, latency, jitter []float32
-	)
-
-	populate := func(data []MediaQualityData) {
-		set := len(data)
-		start = data[0].StartTime
-		end = data[set-1].EndTime
-
-		for _, val := range data {
-			packetLoss = append(packetLoss, val.PacketLoss...)
-			latency = append(latency, val.Latency...)
-			jitter = append(jitter, val.Jitter...)
-		}
-	}
-
-	switch dp {
-	case "video_in":
-		populate(qualities.MediaSessions[0].VideoIn)
-
-	case "video_out":
-		populate(qualities.MediaSessions[0].VideoOut)
-
-	case "audio_in":
-		populate(qualities.MediaSessions[0].AudioIn)
-
-	case "audio_out":
-		populate(qualities.MediaSessions[0].AudioOut)
-
-	case "share_in":
-		populate(qualities.MediaSessions[0].ShareIn)
-
-	case "share_out":
-		populate(qualities.MediaSessions[0].ShareOut)
-	}
-
-	return &VisualData{
-		MeetingID:  qualities.MeetingID,
-		DataPoint:  dp,
-		StartTime:  start,
-		EndTime:    end,
-		PacketLoss: packetLoss,
-		Latency:    latency,
-		Jitter:     jitter,
-	}, nil
-}
-
 type MeetingQualities struct {
 	MeetingID     string                `json:"meeting_id"`
 	MediaSessions []MediaSessionQuality `json:"items"`
@@ -214,4 +152,97 @@ type Resources struct {
 	ProcessMaxCPU     []float32 `json:"processMaxCPU"`
 	SystemAverageCPU  []float32 `json:"systemAverageCPU"`
 	SystemMaxCPU      []float32 `json:"systemMaxCPU"`
+}
+
+type VisualData struct {
+	MeetingID string          `json:"meeting_id"`
+	DataPoint string          `json:"data_point"`
+	Sessions  []VisualSession `json:"sessions"`
+}
+
+type VisualSession struct {
+	StartTime  string    `json:"start_time"`
+	EndTime    string    `json:"end_time"`
+	PacketLoss []float32 `json:"packet_loss"`
+	Latency    []float32 `json:"latency"`
+	Jitter     []float32 `json:"jitter"`
+}
+
+func GetAllVisualData(qualities *MeetingQualities) ([]VisualData, error) {
+	vData := func(dp string) VisualData {
+		return VisualData{
+			MeetingID: qualities.MeetingID,
+			DataPoint: dp,
+			Sessions: func() []VisualSession {
+				var visualSessions []VisualSession
+				for _, session := range qualities.MediaSessions {
+					switch dp {
+					case "audio_in":
+						visualSessions = append(visualSessions, *populateVisualSession(session.AudioIn))
+					case "audio_out":
+						visualSessions = append(visualSessions, *populateVisualSession(session.AudioOut))
+					case "video_in":
+						visualSessions = append(visualSessions, *populateVisualSession(session.VideoIn))
+					case "video_out":
+						visualSessions = append(visualSessions, *populateVisualSession(session.VideoOut))
+					case "share_in":
+						visualSessions = append(visualSessions, *populateVisualSession(session.ShareIn))
+					case "share_out":
+						visualSessions = append(visualSessions, *populateVisualSession(session.ShareOut))
+					}
+				}
+				return visualSessions
+			}(),
+		}
+	}
+
+	return []VisualData{vData("audio_in"), vData("audio_out"), vData("video_in"),
+		vData("video_out"), vData("share_in"), vData("share_out"),
+	}, nil
+}
+
+func GetVisualData(qualities *MeetingQualities, dp string) (*VisualData, error) {
+	var visualSessions []VisualSession
+	for _, session := range qualities.MediaSessions {
+		switch dp {
+		case "video_in":
+			visualSessions = append(visualSessions, *populateVisualSession(session.VideoIn))
+		case "video_out":
+			visualSessions = append(visualSessions, *populateVisualSession(session.VideoOut))
+		case "audio_in":
+			visualSessions = append(visualSessions, *populateVisualSession(session.VideoOut))
+		case "audio_out":
+			visualSessions = append(visualSessions, *populateVisualSession(session.VideoOut))
+		case "share_in":
+			visualSessions = append(visualSessions, *populateVisualSession(session.VideoOut))
+		case "share_out":
+			visualSessions = append(visualSessions, *populateVisualSession(session.VideoOut))
+		default:
+			return nil, errors.New(`invalid request, "dp" parameter not recognized`)
+		}
+	}
+
+	return &VisualData{
+		MeetingID: qualities.MeetingID,
+		DataPoint: dp,
+		Sessions:  visualSessions,
+	}, nil
+}
+
+func populateVisualSession(data []MediaQualityData) *VisualSession {
+	var packetLoss, latency, jitter []float32
+	for _, val := range data {
+		packetLoss = append(packetLoss, val.PacketLoss...)
+		latency = append(latency, val.Latency...)
+		jitter = append(jitter, val.Jitter...)
+	}
+
+	set := len(data)
+	return &VisualSession{
+		StartTime:  data[0].StartTime,
+		EndTime:    data[set-1].EndTime,
+		PacketLoss: packetLoss,
+		Latency:    latency,
+		Jitter:     jitter,
+	}
 }

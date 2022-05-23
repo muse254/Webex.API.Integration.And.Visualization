@@ -211,46 +211,48 @@ func getMeetings(host string) http.HandlerFunc {
 
 func analyticsVisualization(db *persist.Persist, host string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id := r.URL.Query().Get("id")
-		if id == "" {
-			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, "No meeting ID provided"), http.StatusSeeOther)
-			return
-		}
+		// id := r.URL.Query().Get("id")
+		// if id == "" {
+		// 	http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, "No meeting ID provided"), http.StatusSeeOther)
+		// 	return
+		// }
 
-		qualities, errUrl := analyticsCommonfetch(r, db, id, host)
-		if errUrl != "" {
-			http.Redirect(w, r, errUrl, http.StatusSeeOther)
-			return
-		}
+		// dp := r.URL.Query().Get("dp")
+		// if dp == "" {
+		// 	dp = "audio_in"
+		// }
 
-		dp := r.URL.Query().Get("dp")
-		if dp == "" {
-			dp = "audio_in"
-		}
+		// qualities, errUrl := analyticsCommonfetch(r, db, id, host)
+		// if errUrl != "" {
+		// 	http.Redirect(w, r, errUrl, http.StatusSeeOther)
+		// 	return
+		// }
 
-		chartData, err := types.NewJSONVisualData(qualities, dp)
-		if err != nil {
-			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
-			return
-		}
+		// chartData, err := types.GetVisualData(qualities, dp)
+		// if err != nil {
+		// 	http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
+		// 	return
+		// }
 
-		data, _ := json.Marshal(chartData)
-		t, err := template.ParseFiles("./templates/analytics_visualization.html")
-		if err != nil {
-			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
-			return
-		}
+		// data, _ := json.Marshal(chartData)
+		// t, err := template.ParseFiles("./templates/analytics_visualization.html")
+		// if err != nil {
+		// 	http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
+		// 	return
+		// }
 
-		if err = t.Execute(w, struct {
-			StrData string
-			Actual  *types.VisualData
-		}{
-			StrData: string(data),
-			Actual:  chartData,
-		}); err != nil {
-			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
-			return
-		}
+		// if err = t.Execute(w, struct {
+		// 	StrData string
+		// 	Actual  *types.VisualData
+		// }{
+		// 	StrData: string(data),
+		// 	Actual:  chartData,
+		// }); err != nil {
+		// 	http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
+		// 	return
+		// }
+
+		w.Write([]byte("Work in Progress"))
 	}
 }
 
@@ -268,15 +270,27 @@ func dowloadAnalyticsFile(db *persist.Persist, host string) http.HandlerFunc {
 			return
 		}
 
+		// transform to visual data
+		visualData, err := types.GetAllVisualData(qualities)
+		if err != nil {
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, "Internal Error"), http.StatusSeeOther)
+			return
+		}
+
+		// file data
+		analytics := struct {
+			Analytics []types.VisualData `json:"analytics"`
+		}{visualData}
+
 		// pretty print the qualities as json
-		data, err := json.MarshalIndent(qualities, "", "\t")
+		data, err := json.Marshal(analytics)
 		if err != nil {
 			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
 			return
 		}
 
 		// write the data as a binary stream to client that will be donloaded as file
-		w.Header().Add("Content-Disposition", fmt.Sprintf("attachment; filename=meeting_analytics_%s.json", qualities.MeetingID))
+		w.Header().Add("Content-Disposition", fmt.Sprintf("attachment; filename=analytics_%s.json", qualities.MeetingID))
 		w.Header().Add("Content-Type", "application/octet-stream")
 		w.Write(data)
 	}

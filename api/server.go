@@ -211,48 +211,56 @@ func getMeetings(host string) http.HandlerFunc {
 
 func analyticsVisualization(db *persist.Persist, host string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// id := r.URL.Query().Get("id")
-		// if id == "" {
-		// 	http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, "No meeting ID provided"), http.StatusSeeOther)
-		// 	return
-		// }
+		id := r.URL.Query().Get("id")
+		if id == "" {
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, "No meeting ID provided"), http.StatusSeeOther)
+			return
+		}
 
-		// dp := r.URL.Query().Get("dp")
-		// if dp == "" {
-		// 	dp = "audio_in"
-		// }
+		dp := r.URL.Query().Get("dp")
+		if dp == "" {
+			dp = "audio_in"
+		}
 
-		// qualities, errUrl := analyticsCommonfetch(r, db, id, host)
-		// if errUrl != "" {
-		// 	http.Redirect(w, r, errUrl, http.StatusSeeOther)
-		// 	return
-		// }
+		qualities, errUrl := analyticsCommonfetch(r, db, id, host)
+		if errUrl != "" {
+			http.Redirect(w, r, errUrl, http.StatusSeeOther)
+			return
+		}
 
-		// chartData, err := types.GetVisualData(qualities, dp)
-		// if err != nil {
-		// 	http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
-		// 	return
-		// }
+		chartData, err := types.GetVisualData(qualities, dp)
+		if err != nil {
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
+			return
+		}
 
-		// data, _ := json.Marshal(chartData)
-		// t, err := template.ParseFiles("./templates/analytics_visualization.html")
-		// if err != nil {
-		// 	http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
-		// 	return
-		// }
+		data, _ := json.Marshal(chartData)
+		t, err := template.ParseFiles("./templates/analytics_visualization.html")
+		if err != nil {
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
+			return
+		}
 
-		// if err = t.Execute(w, struct {
-		// 	StrData string
-		// 	Actual  *types.VisualData
-		// }{
-		// 	StrData: string(data),
-		// 	Actual:  chartData,
-		// }); err != nil {
-		// 	http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
-		// 	return
-		// }
-
-		w.Write([]byte("Work in Progress"))
+		if err = t.Execute(w, struct {
+			DataPoint string
+			MeetingID string
+			Sessions  []int
+			Data      string
+		}{
+			DataPoint: dp,
+			MeetingID: id,
+			Sessions: func() []int {
+				var sessions []int
+				for i := range qualities.MediaSessions {
+					sessions = append(sessions, i+1)
+				}
+				return sessions
+			}(),
+			Data: string(data),
+		}); err != nil {
+			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
+			return
+		}
 	}
 }
 
@@ -283,7 +291,7 @@ func dowloadAnalyticsFile(db *persist.Persist, host string) http.HandlerFunc {
 		}{visualData}
 
 		// pretty print the qualities as json
-		data, err := json.Marshal(analytics)
+		data, err := json.MarshalIndent(analytics, "", "  ")
 		if err != nil {
 			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
 			return

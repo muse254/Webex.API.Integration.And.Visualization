@@ -13,32 +13,30 @@
         // the JSON data is provided when the HTML is generated from this template.
         var analytics = {{ .Data }};
         google.charts.load('current', { 'packages': ['line'] });
-        // iterate over sessions
-        for (var i = 0; i < analytics.sessions.length; i++) {
-            google.charts.setOnLoadCallback(drawGraph(analytics.sessions[i], i + 1));
-        }
+        google.charts.setOnLoadCallback(drawGraph(analytics));
 
-        function drawGraph(session, count) {
+
+        function drawGraph(analytics) {
             return function () {
                 var data = new google.visualization.DataTable();
                 data.addColumn('number', 'Time Series Entry');
-                data.addColumn('number', 'Packet Loss');
-                data.addColumn('number', 'Latency');
-                data.addColumn('number', 'Jitter');
+                data.addColumn('number', 'Packet Loss (%s)');
+                data.addColumn('number', 'Latency (ms)');
+                data.addColumn('number', 'Jitter (ms)');
 
-                for (let j = 0; j < session.latency.length; j++) {
-                    data.addRow([j + 1, session.packet_loss[j], session.latency[j], session.jitter[j]]);
+                for (let i = 0; i < analytics.packet_loss.length; i++) {
+                    data.addRow([i + 1, analytics.packet_loss[i], analytics.latency[i], analytics.jitter[i]]);
                 }
 
                 var options = {
                     chart: {
-                        title: `Data from ${session.start_time} to ${session.end_time}`,
+                        title: `Data from ${analytics.start_time} to ${analytics.end_time}`,
                     },
                     width: 1000,
                     height: 700
                 };
 
-                var graph = new google.charts.Line(document.getElementById('session_' + count));
+                var graph = new google.charts.Line(document.getElementById('graph'));
                 graph.draw(data, google.charts.Line.convertOptions(options));
             }
         }
@@ -74,11 +72,9 @@
             {{end}}
         </ul>
     </section>
-    <!--Divs that will hold the graphs-->
-    <h1 id="title" style="text-align: center;"> Data for {{ .DataPoint }} from {{ .MeetingID }}</h1>
-    {{ range .Sessions}}
-    <div id="session_{{.}}"></div>
-    {{end}}
+    <h1 id="title"> Data for {{ dpTitleName .DataPoint }} from Meeting ID: {{ .MeetingID }}</h1>
+    <!--Div that will hold the graph-->
+    <div id="graph"></div>
 </body>
 
 </html>

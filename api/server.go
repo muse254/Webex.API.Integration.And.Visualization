@@ -235,7 +235,9 @@ func analyticsVisualization(db *persist.Persist, host string) http.HandlerFunc {
 		}
 
 		data, _ := json.Marshal(chartData)
-		t, err := template.ParseFiles("./templates/analytics_visualization.html")
+		t, err := template.New("analytics_visualization.html").Funcs(template.FuncMap{
+			"dpTitleName": dpTitleName,
+		}).ParseFiles("./templates/analytics_visualization.html")
 		if err != nil {
 			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
 			return
@@ -244,19 +246,11 @@ func analyticsVisualization(db *persist.Persist, host string) http.HandlerFunc {
 		if err = t.Execute(w, struct {
 			DataPoint string
 			MeetingID string
-			Sessions  []int
 			Data      string
 		}{
 			DataPoint: dp,
 			MeetingID: id,
-			Sessions: func() []int {
-				var sessions []int
-				for i := range qualities.MediaSessions {
-					sessions = append(sessions, i+1)
-				}
-				return sessions
-			}(),
-			Data: string(data),
+			Data:      string(data),
 		}); err != nil {
 			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
 			return
@@ -378,4 +372,23 @@ func getCookieValue(cookies, cookieName string) (string, error) {
 	}
 
 	return "", fmt.Errorf(`"%s" not found in cookies value`, cookieName)
+}
+
+func dpTitleName(dp string) string {
+	switch dp {
+	case "video_in":
+		return "Video In"
+	case "video_out":
+		return "Video Out"
+	case "audio_in":
+		return "Audio In"
+	case "audio_out":
+		return "Audio Out"
+	case "share_in":
+		return "Share In"
+	case "share_out":
+		return "Share Out"
+	default:
+		return "Unknown"
+	}
 }

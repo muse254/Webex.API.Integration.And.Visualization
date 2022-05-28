@@ -129,7 +129,7 @@ type MediaSessionQuality struct {
 	ShareIn []MediaQualityData `json:"shareIn"`
 	// ShareOut is the collection of upstream (sent from the client) share quality data.
 	ShareOut []MediaQualityData `json:"shareOut"`
-	// Resources sre devide resources such as CPU and memory.
+	// Resources are device resources such as CPU and memory.
 	Resources []Resources `json:"resources"`
 }
 
@@ -155,12 +155,8 @@ type Resources struct {
 }
 
 type VisualData struct {
-	MeetingID string          `json:"meeting_id"`
-	DataPoint string          `json:"data_point"`
-	Sessions  []VisualSession `json:"sessions"`
-}
-
-type VisualSession struct {
+	MeetingID  string    `json:"meeting_id"`
+	DataPoint  string    `json:"data_point"`
 	StartTime  string    `json:"start_time"`
 	EndTime    string    `json:"end_time"`
 	PacketLoss []float32 `json:"packet_loss"`
@@ -170,30 +166,8 @@ type VisualSession struct {
 
 func GetAllVisualData(qualities *MeetingQualities) ([]VisualData, error) {
 	vData := func(dp string) VisualData {
-		return VisualData{
-			MeetingID: qualities.MeetingID,
-			DataPoint: dp,
-			Sessions: func() []VisualSession {
-				var visualSessions []VisualSession
-				for _, session := range qualities.MediaSessions {
-					switch dp {
-					case "audio_in":
-						visualSessions = append(visualSessions, *populateVisualSession(session.AudioIn))
-					case "audio_out":
-						visualSessions = append(visualSessions, *populateVisualSession(session.AudioOut))
-					case "video_in":
-						visualSessions = append(visualSessions, *populateVisualSession(session.VideoIn))
-					case "video_out":
-						visualSessions = append(visualSessions, *populateVisualSession(session.VideoOut))
-					case "share_in":
-						visualSessions = append(visualSessions, *populateVisualSession(session.ShareIn))
-					case "share_out":
-						visualSessions = append(visualSessions, *populateVisualSession(session.ShareOut))
-					}
-				}
-				return visualSessions
-			}(),
-		}
+		visualData, _ := GetVisualData(qualities, dp)
+		return *visualData
 	}
 
 	return []VisualData{vData("audio_in"), vData("audio_out"), vData("video_in"),
@@ -202,47 +176,44 @@ func GetAllVisualData(qualities *MeetingQualities) ([]VisualData, error) {
 }
 
 func GetVisualData(qualities *MeetingQualities, dp string) (*VisualData, error) {
-	var visualSessions []VisualSession
-	for _, session := range qualities.MediaSessions {
+	visualData := &VisualData{
+		MeetingID: qualities.MeetingID,
+		DataPoint: dp,
+	}
+
+	for i, session := range qualities.MediaSessions {
+		if i == 0 {
+			visualData.StartTime = session.VideoIn[0].StartTime
+		}
+		if i == len(qualities.MediaSessions)-1 {
+			visualData.EndTime = session.VideoIn[len(session.VideoIn)-1].EndTime
+		}
+
 		switch dp {
 		case "video_in":
-			visualSessions = append(visualSessions, *populateVisualSession(session.VideoIn))
+			populateSession(session.VideoIn, visualData)
 		case "video_out":
-			visualSessions = append(visualSessions, *populateVisualSession(session.VideoOut))
+			populateSession(session.VideoOut, visualData)
 		case "audio_in":
-			visualSessions = append(visualSessions, *populateVisualSession(session.VideoOut))
+			populateSession(session.AudioIn, visualData)
 		case "audio_out":
-			visualSessions = append(visualSessions, *populateVisualSession(session.VideoOut))
+			populateSession(session.AudioOut, visualData)
 		case "share_in":
-			visualSessions = append(visualSessions, *populateVisualSession(session.VideoOut))
+			populateSession(session.ShareIn, visualData)
 		case "share_out":
-			visualSessions = append(visualSessions, *populateVisualSession(session.VideoOut))
+			populateSession(session.ShareOut, visualData)
 		default:
 			return nil, errors.New(`invalid request, "dp" parameter not recognized`)
 		}
 	}
 
-	return &VisualData{
-		MeetingID: qualities.MeetingID,
-		DataPoint: dp,
-		Sessions:  visualSessions,
-	}, nil
+	return visualData, nil
 }
 
-func populateVisualSession(data []MediaQualityData) *VisualSession {
-	var packetLoss, latency, jitter []float32
+func populateSession(data []MediaQualityData, toAppend *VisualData) {
 	for _, val := range data {
-		packetLoss = append(packetLoss, val.PacketLoss...)
-		latency = append(latency, val.Latency...)
-		jitter = append(jitter, val.Jitter...)
-	}
-
-	set := len(data)
-	return &VisualSession{
-		StartTime:  data[0].StartTime,
-		EndTime:    data[set-1].EndTime,
-		PacketLoss: packetLoss,
-		Latency:    latency,
-		Jitter:     jitter,
+		toAppend.PacketLoss = append(toAppend.PacketLoss, val.PacketLoss...)
+		toAppend.Latency = append(toAppend.Latency, val.Latency...)
+		toAppend.Jitter = append(toAppend.Jitter, val.Jitter...)
 	}
 }

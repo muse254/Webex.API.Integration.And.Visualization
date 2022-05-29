@@ -10,35 +10,55 @@
     <!--Load the AJAX API-->
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script type="text/javascript">
-        // the JSON data is provided when the HTML is generated from this template.
+        // the JSON data(analytics) is provided when the HTML is generated from this template.
         var analytics = {{ .Data }};
+
+        //  .StartTime & .EndTime is also provided when the HTML is generated from this template.
+        const startTime = new Date('{{ .StartTime }}');
+        const endTime = new Date('{{ .EndTime }}');
+        var timeDiff = (endTime.getDate() - startTime.getDate()) / 1000;
+
+        // calls to the google charts API loads the chart presets we need.
         google.charts.load('current', { 'packages': ['line'] });
-        google.charts.setOnLoadCallback(drawGraph(analytics));
+        google.charts.setOnLoadCallback(drawGraph);
 
+        function drawGraph() {
+            var data = new google.visualization.DataTable();
+            data.addColumn('string', 'Time Series Entry');
+            data.addColumn('number', 'Packet Loss (%)');
+            data.addColumn('number', 'Latency (ms)');
+            data.addColumn('number', 'Jitter (ms)');
 
-        function drawGraph(analytics) {
-            return function () {
-                var data = new google.visualization.DataTable();
-                data.addColumn('number', 'Time Series Entry');
-                data.addColumn('number', 'Packet Loss (%s)');
-                data.addColumn('number', 'Latency (ms)');
-                data.addColumn('number', 'Jitter (ms)');
-
-                for (let i = 0; i < analytics.packet_loss.length; i++) {
-                    data.addRow([i + 1, analytics.packet_loss[i], analytics.latency[i], analytics.jitter[i]]);
+            let count = analytics.packet_loss.length;
+            for (let i = 0; i < count; i++) {
+                let timeSeriesEntry = "";
+                if (i == 0) {
+                    timeSeriesEntry = onlyTime(startTime);
+                } else if (i == count - 1) {
+                    timeSeriesEntry = onlyTime(endTime)
+                } else {
+                    let newStartTime = startTime;
+                    newStartTime.setSeconds(newStartTime.getSeconds() + Math.floor((i + 1) / count * timeDiff))
+                    timeSeriesEntry = onlyTime(newStartTime)
                 }
 
-                var options = {
-                    chart: {
-                        title: `Data from ${analytics.start_time} to ${analytics.end_time}`,
-                    },
-                    width: 1000,
-                    height: 700
-                };
-
-                var graph = new google.charts.Line(document.getElementById('graph'));
-                graph.draw(data, google.charts.Line.convertOptions(options));
+                data.addRow([timeSeriesEntry, analytics.packet_loss[i], analytics.latency[i], analytics.jitter[i]]);
             }
+
+            var options = {
+                chart: {
+                    title: `Data from ${analytics.start_time} to ${analytics.end_time}`,
+                },
+                width: 1000,
+                height: 700
+            };
+
+            var graph = new google.charts.Line(document.getElementById('graph'));
+            graph.draw(data, google.charts.Line.convertOptions(options));
+        }
+
+        function onlyTime(date) {
+            return date.toISOString().split('T')[1].split('.')[0];
         }
     </script>
 </head>

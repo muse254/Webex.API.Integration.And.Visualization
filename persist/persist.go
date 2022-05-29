@@ -64,7 +64,3 @@ func (p *Persist) RetriveAnalyticsData(clientID, meetingID string) (*types.Meeti
 	data.MeetingID = meetingID
 	return &data, nil
 }
-
-func (p *Persist) ReturnDB() *sql.DB {
-	return p.db
-}

@@ -209,6 +209,14 @@ func getMeetings(host string) http.HandlerFunc {
 	}
 }
 
+type TemplateData struct {
+	DataPoint string
+	MeetingID string
+	StartTime string
+	EndTime   string
+	Data      string
+}
+
 func analyticsVisualization(db *persist.Persist, host string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Query().Get("id")
@@ -243,15 +251,15 @@ func analyticsVisualization(db *persist.Persist, host string) http.HandlerFunc {
 			return
 		}
 
-		if err = t.Execute(w, struct {
-			DataPoint string
-			MeetingID string
-			Data      string
-		}{
+		templateData := TemplateData{
 			DataPoint: dp,
 			MeetingID: id,
+			StartTime: chartData.StartTime,
+			EndTime:   chartData.EndTime,
 			Data:      string(data),
-		}); err != nil {
+		}
+
+		if err = t.Execute(w, templateData); err != nil {
 			http.Redirect(w, r, fmt.Sprintf("%s/error?msg=%s", host, err.Error()), http.StatusSeeOther)
 			return
 		}

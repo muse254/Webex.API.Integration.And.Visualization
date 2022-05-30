@@ -16,7 +16,7 @@
         //  .StartTime & .EndTime is also provided when the HTML is generated from this template.
         const startTime = new Date('{{ .StartTime }}');
         const endTime = new Date('{{ .EndTime }}');
-        var timeDiff = (endTime.getDate() - startTime.getDate()) / 1000;
+        var timeDiff = (endTime.getSeconds() - startTime.getSeconds()) / 1000;
 
         // calls to the google charts API loads the chart presets we need.
         google.charts.load('current', { 'packages': ['line'] });
@@ -57,13 +57,14 @@
         }
 
         function onlyTime(date) {
-            return date.toISOString().split('T')[1].split('.')[0];
+            let newDate = new Date(date);
+            return newDate.toISOString().split('T')[1].split('.')[0];
         }
 
         function timeStamp(addend, from) {
-            let date = new Date(from);
-            date.setSeconds(date.getSeconds() + addend);
-            return onlyTime(date);
+            let newDate = new Date(from);
+            newDate.setSeconds(newDate.getSeconds() + addend);
+            return onlyTime(newDate);
         }
     </script>
 </head>

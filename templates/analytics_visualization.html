@@ -16,7 +16,7 @@
         //  .StartTime & .EndTime is also provided when the HTML is generated from this template.
         const startTime = new Date('{{ .StartTime }}');
         const endTime = new Date('{{ .EndTime }}');
-        var timeDiff = (endTime.getSeconds() - startTime.getSeconds()) / 1000;
+        var timeDiff = (endTime - startTime) / 1000;
 
         // calls to the google charts API loads the chart presets we need.
         google.charts.load('current', { 'packages': ['line'] });

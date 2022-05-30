@@ -38,7 +38,7 @@
                     timeSeriesEntry = onlyTime(endTime)
                 } else {
                     let newStartTime = startTime;
-                    newStartTime.setSeconds(newStartTime.getSeconds() + Math.floor((i + 1) / count * timeDiff))
+                    newStartTime.setSeconds(newStartTime.getSeconds() + Math.floor(((i + 1) / count) * timeDiff))
                     timeSeriesEntry = onlyTime(newStartTime)
                 }
 
